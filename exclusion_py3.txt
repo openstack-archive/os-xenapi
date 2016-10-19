@@ -1,0 +1,11 @@
+os_xenapi.tests.client.test_session.CallPluginTestCase
+os_xenapi.tests.client.test_session.SessionTestCase
+
+##########################################################################
+# NOTE(cdent): The following test takes 10-15 minutes to run because
+# of eventlet lockups and can cause a gate run to timeout. See:
+# https://bugs.launchpad.net/nova/+bug/1558105
+##########################################################################
+
+# The XenAPI plugins run in a Python 2.4 environment, so avoid attempting
+# to run their unit tests in a Python 3 environment.
