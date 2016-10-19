@@ -3,3 +3,12 @@
 # process, which may cause wedges in the gate later.
 
 pbr>=1.6 # Apache-2.0
+Babel>=2.3.4 # BSD
+
+eventlet!=0.18.3,>=0.18.2 # MIT
+oslo.concurrency>=3.8.0 # Apache-2.0
+oslo.log>=3.11.0 # Apache-2.0
+oslo.utils>=3.17.0 # Apache-2.0
+oslo.i18n>=2.1.0 # Apache-2.0
+six>=1.9.0 # MIT
+XenAPI>=1.2  # LGPL
