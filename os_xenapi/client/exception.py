@@ -16,7 +16,7 @@ from os_xenapi.client.i18n import _
 
 
 class OsXenApiException(Exception):
-    """Base OsXenapi Exception
+    """Base OsXenApi Exception for use
 
     To correctly use this class, inherit from it and define
     a 'msg_fmt' property. That msg_fmt will get printf'd
@@ -24,27 +24,18 @@ class OsXenApiException(Exception):
 
     """
     msg_fmt = _("An unknown exception occurred.")
-    code = 500
 
-    def __init__(self, message=None, **kwargs):
+    def __init__(self, details=None, **kwargs):
         self.kwargs = kwargs
 
-        if 'code' not in self.kwargs:
-            try:
-                self.kwargs['code'] = self.code
-            except AttributeError:
-                pass
+        if not details:
+            details = self.msg_fmt % kwargs
+        self.details = details
+        super(OsXenApiException, self).__init__(details)
 
-        if not message:
-            message = self.msg_fmt % kwargs
-
-        self.message = message
-        super(OsXenApiException, self).__init__(message)
-
-    def format_message(self):
-        # NOTE(mrodden): use the first argument to the python Exception object
-        # which should be our full NovaException message, (see __init__)
-        return self.args[0]
+    def _details_map(self):
+        return dict([(str(i), self.details[i])
+                     for i in range(len(self.details))])
 
 
 class PluginRetriesExceeded(OsXenApiException):
@@ -53,3 +44,24 @@ class PluginRetriesExceeded(OsXenApiException):
 
 class SessionLoginTimeout(OsXenApiException):
     msg_fmt = _("Unable to log in to XenAPI (is the Dom0 disk full?)")
+
+
+class VersionIncompetible(OsXenApiException):
+    msg_fmt = _("Plugin version mismatch (Expected %(expected_version)s, "
+                "got %(current_version)s)")
+
+
+class InvalidObjectUuid(OsXenApiException):
+    msg_fmt = _("Invalid UUID of %(object_type)s")
+
+
+class CommandExecutionTimeout(OsXenApiException):
+    msg_fmt = _("Command execution timeout")
+
+
+class CommandNotImplemented(OsXenApiException):
+    msg_fmt = _("This command is not implemented in Dom0")
+
+
+class CommandNotFound(OsXenApiException):
+    msg_fmt = _("This command is not found in Dom0")
