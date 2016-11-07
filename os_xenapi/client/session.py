@@ -38,7 +38,6 @@ except ImportError:
     import six.moves.xmlrpc_client as xmlrpclib
 
 from os_xenapi.client import exception
-from os_xenapi.client.i18n import _
 from os_xenapi.client.i18n import _LW
 from os_xenapi.client import objects as cli_objects
 
@@ -114,9 +113,9 @@ class XenAPISession(object):
             return
 
         if not versionutils.is_compatible(requested_version, current_version):
-            raise exception.OsXenApiException(
-                _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %
-                {'exp': requested_version, 'got': current_version})
+            raise exception.VersionIncompetible(
+                expected_version=requested_version,
+                current_version=current_version)
 
     def _create_first_session(self, url, user, pw):
         try:
@@ -190,7 +189,23 @@ class XenAPISession(object):
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
         with self._get_session() as session:
-            return session.xenapi_request(method, args)
+            try:
+                value = session.xenapi_request(method, args)
+                return value
+            except self.XenAPI.Failure as exc:
+                if len(exc.details) == 0:
+                    raise exception.OsXenApiException()
+                if exc.details[0] == 'UUID_INVALID':
+                    raise exception.InvalidObjectUuid()
+                err_msg = exc.details[-1].splitlines()[-1]
+                if 'TIMEOUT:' in err_msg:
+                    raise exception.CommandExecutionTimeout()
+                if 'NOT IMPLEMENTED:' in err_msg:
+                    raise exception.CommandNotImplemented()
+                if 'CommandNotFound' in err_msg:
+                    raise exception.CommandNotFound()
+                else:
+                    raise exception.OsXenApiException(details=exc.details)
 
     def call_plugin(self, plugin, fn, args):
         """Call host.call_plugin on a background thread."""
@@ -297,12 +312,11 @@ class XenAPISession(object):
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
                     exc.details[2] == 'Failure'):
-                params = None
                 try:
                     params = ast.literal_eval(exc.details[3])
                 except Exception:
-                    raise exc
-                raise self.XenAPI.Failure(params)
+                    raise exception.OsXenApiException(details=exc.details)
+                raise exception.OsXenApiException(details=params)
             else:
                 raise
         except xmlrpclib.ProtocolError as exc:
