@@ -1,2 +1,6 @@
 # The XenAPI plugins run in a Python 2 environment, so avoid attempting
 # to run their unit tests in a Python 3 environment
+
+os_xenapi.tests.plugins.test_bandwidth.BandwidthTestCase
+os_xenapi.tests.plugins.test_dom0_plugin_version.Dom0PluginVersion
+os_xenapi.tests.plugins.test_partition_utils.PartitionUtils
