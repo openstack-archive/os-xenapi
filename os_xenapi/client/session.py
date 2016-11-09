@@ -65,7 +65,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.8'
+    PLUGIN_REQUIRED_VERSION = '2.0'
 
     def __init__(self, url, user, pw, originator="os-xenapi", timeout=10,
                  concurrent=5):
