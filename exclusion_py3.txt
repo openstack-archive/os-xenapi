@@ -3,3 +3,4 @@
 
 os_xenapi.tests.client.test_session.CallPluginTestCase
 os_xenapi.tests.client.test_session.SessionTestCase
+os_xenapi.tests.plugins

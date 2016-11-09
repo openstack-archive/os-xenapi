@@ -65,7 +65,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.8'
+    PLUGIN_REQUIRED_VERSION = '2.0'
 
     def __init__(self, url, user, pw, originator="os-xenapi", timeout=10,
                  concurrent=5):
@@ -197,17 +197,6 @@ class XenAPISession(object):
         # NOTE(armando): pass the host uuid along with the args so that
         # the plugin gets executed on the right host when using XS pools
         args['host_uuid'] = self.host_uuid
-
-        # TODO(sfinucan): Once the required plugin version is bumped to v2.0,
-        # we can assume that all files will have a '.py' extension. Until then,
-        # handle hosts without this extension by rewriting all calls to plugins
-        # to exclude the '.py' extension. This is made possible through the
-        # temporary inclusion of symlinks to plugins.
-        # NOTE(sfinucan): 'partition_utils.py' was the only plugin with a '.py'
-        # extension before this change was enacted, hence this plugin is
-        # excluded
-        if not plugin == 'partition_utils.py':
-            plugin = plugin.rstrip('.py')
 
         with self._get_session() as session:
             return self._unwrap_plugin_exceptions(
