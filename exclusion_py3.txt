@@ -1,2 +1,4 @@
 # The XenAPI plugins run in a Python 2 environment, so avoid attempting
 # to run their unit tests in a Python 3 environment
+
+#os_xenapi.tests.plugins
