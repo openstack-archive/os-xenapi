@@ -2,4 +2,4 @@
 # to run their unit tests in a Python 3 environment
 
 os_xenapi.tests.client.test_session.CallPluginTestCase
-os_xenapi.tests.client.test_session.SessionTestCase
+#os_xenapi.tests.client.test_session.SessionTestCase

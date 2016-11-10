@@ -41,6 +41,7 @@ from os_xenapi.client import exception
 from os_xenapi.client.i18n import _
 from os_xenapi.client.i18n import _LW
 from os_xenapi.client import objects as cli_objects
+from os_xenapi.client import XenAPI
 
 LOG = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class XenAPISession(object):
         :param timeout: Timeout in seconds for XenAPI login
         :param concurrent: Maximum concurrent XenAPI connections
         """
-        import XenAPI
+        # import XenAPI
         self.XenAPI = XenAPI
         self.originator = originator
         self.timeout = timeout
