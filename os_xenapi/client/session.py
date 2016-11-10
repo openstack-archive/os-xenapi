@@ -41,6 +41,7 @@ from os_xenapi.client import exception
 from os_xenapi.client.i18n import _
 from os_xenapi.client.i18n import _LW
 from os_xenapi.client import objects as cli_objects
+from os_xenapi.client import XenAPI
 
 LOG = logging.getLogger(__name__)
 
@@ -78,8 +79,6 @@ class XenAPISession(object):
         :param timeout: Timeout in seconds for XenAPI login
         :param concurrent: Maximum concurrent XenAPI connections
         """
-        import XenAPI
-        self.XenAPI = XenAPI
         self.originator = originator
         self.timeout = timeout
         self.concurrent = concurrent
@@ -242,7 +241,7 @@ class XenAPISession(object):
                            'attempts': attempts,
                            'callback_result': callback_result})
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
-            except self.XenAPI.Failure as exc:
+            except XenAPI.Failure as exc:
                 if self._is_retryable_exception(exc, fn):
                     LOG.warning(_LW('%(plugin)s.%(fn)s failed. '
                                     'Retrying call.'),
@@ -280,8 +279,8 @@ class XenAPISession(object):
         """Stubout point. This can be replaced with a mock session."""
         self.is_local_connection = url == "unix://local"
         if self.is_local_connection:
-            return self.XenAPI.xapi_local()
-        return self.XenAPI.Session(url)
+            return XenAPI.xapi_local()
+        return XenAPI.Session(url)
 
     def _create_session_and_login(self, url, user, pw):
         session = self._create_session(url)
@@ -292,7 +291,7 @@ class XenAPISession(object):
         """Parse exception details."""
         try:
             return func(*args, **kwargs)
-        except self.XenAPI.Failure as exc:
+        except XenAPI.Failure as exc:
             LOG.debug("Got exception: %s", exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
@@ -302,7 +301,7 @@ class XenAPISession(object):
                     params = ast.literal_eval(exc.details[3])
                 except Exception:
                     raise exc
-                raise self.XenAPI.Failure(params)
+                raise XenAPI.Failure(params)
             else:
                 raise
         except xmlrpclib.ProtocolError as exc:
@@ -312,7 +311,7 @@ class XenAPISession(object):
     def get_rec(self, record_type, ref):
         try:
             return self.call_xenapi('%s.get_record' % record_type, ref)
-        except self.XenAPI.Failure as e:
+        except XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
 
