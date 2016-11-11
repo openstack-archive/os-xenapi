@@ -1,6 +1,7 @@
 [run]
 branch = True
 source = os_xenapi
+omit = os_xenapi/test/*
 
 [report]
 ignore_errors = True
