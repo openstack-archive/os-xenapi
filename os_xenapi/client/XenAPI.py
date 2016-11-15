@@ -49,7 +49,7 @@ class Failure(Exception):
             # py2.4: except Exception, exn
             # py2.7/py3: except Exception as exn
             type, value = sys.exc_info()[:2]
-            sys.stderr.write("%s %s", type, value)
+            sys.stderr.write("%s %s" % (type, value))
             return "Xen-API failure: %s" % str(self.details)
 
     def _details_map(self):
