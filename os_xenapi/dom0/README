@@ -5,4 +5,13 @@ If you install them manually, you will need to ensure that the newly
 added files are executable. You can do this by running the following
 command (from dom0):
 
-chmod a+x /etc/xapi.d/plugins/*
+    chmod a+x /etc/xapi.d/plugins/*
+
+Otherwise, you can build rpm package by running the following command:
+
+    cd $OS_XENAPI_ROOT/os_xenapi/dom0/contrib
+    ./build-rpm.sh [VERSION]
+
+and install the package by running the following command in dom0:
+
+    rpm -i os-xenapi-dom0-plugins-*.noarch.rpm
