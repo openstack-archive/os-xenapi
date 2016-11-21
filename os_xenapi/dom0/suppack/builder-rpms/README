@@ -1,0 +1,4 @@
+These two RPMs are used for building supplemental ISO package.
+
+supp-pack-build.rpm : supp-pack-build-2.1.0-xs55.noarch.rpm
+xcp-python-libs.rpm : xcp-python-libs-1.9.0-159.noarch.rpm
