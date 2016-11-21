@@ -363,3 +363,6 @@ class XenAPISession(object):
                 self._cached_xsm_sr_relaxed = config_value.lower() == 'true'
 
         return self._cached_xsm_sr_relaxed
+
+    def dummyfunc(self):
+        pass
