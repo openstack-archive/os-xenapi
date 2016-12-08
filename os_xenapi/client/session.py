@@ -29,7 +29,6 @@ from eventlet import timeout
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from six.moves import http_client
-from six.moves import range
 from six.moves import urllib
 
 try:
@@ -57,6 +56,7 @@ def apply_session_helpers(session):
     session.VLAN = cli_objects.VLAN(session)
     session.host = cli_objects.Host(session)
     session.network = cli_objects.Network(session)
+    session.pool = cli_objects.Pool(session)
 
 
 class XenAPISession(object):
@@ -91,8 +91,7 @@ class XenAPISession(object):
         self.host_ref = self._get_host_ref()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
-        # TODO(huanxie) Uncomment _verify_plugin_version() in the future
-        # self._verify_plugin_version()
+        self._verify_plugin_version()
         self.platform_version = self._get_platform_version()
         self._cached_xsm_sr_relaxed = None
 
@@ -114,7 +113,7 @@ class XenAPISession(object):
             return
 
         if not versionutils.is_compatible(requested_version, current_version):
-            raise exception.OsXenApiException(
+            raise XenAPI.Failure(
                 _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %
                 {'exp': requested_version, 'got': current_version})
 
@@ -325,18 +324,18 @@ class XenAPISession(object):
         name = '%s-%s' % (self.originator, label)
         task_ref = self.call_xenapi("task.create", name, desc)
         try:
-            LOG.debug('Created task %s with ref %s' % (name, task_ref))
+            LOG.debug('Created task %s with ref %s', name, task_ref)
             yield task_ref
         finally:
             self.call_xenapi("task.destroy", task_ref)
-            LOG.debug('Destroyed task ref %s' % task_ref)
+            LOG.debug('Destroyed task ref %s', task_ref)
 
     @contextlib.contextmanager
-    def http_connection(self, session):
+    def http_connection(self):
         conn = None
 
-        xs_url = urllib.parse.urlparse(session.url)
-        LOG.debug("Creating http(s) connection to %s" % session.url)
+        xs_url = urllib.parse.urlparse(self.url)
+        LOG.debug("Creating http(s) connection to %s", self.url)
         if xs_url.scheme == 'http':
             conn = http_client.HTTPConnection(xs_url.netloc)
         elif xs_url.scheme == 'https':
