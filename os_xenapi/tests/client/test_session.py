@@ -23,12 +23,14 @@ from os_xenapi.tests import base
 
 
 class SessionTestCase(base.TestCase):
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     def test_session_nova_originator(self, mock_version_and_brand,
                                      mock_create_session,
-                                     mock_platform_version):
+                                     mock_platform_version,
+                                     mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
         timeout = 10
@@ -44,13 +46,15 @@ class SessionTestCase(base.TestCase):
         sess.login_with_password.assert_called_with('username', 'password',
                                                     originator)
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch('eventlet.timeout.Timeout')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     def test_session_login_with_timeout(self, mock_version,
                                         create_session, mock_timeout,
-                                        mock_platform_version):
+                                        mock_platform_version,
+                                        mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
         sess = mock.Mock()
@@ -63,12 +67,14 @@ class SessionTestCase(base.TestCase):
         self.assertEqual(concurrent, sess.login_with_password.call_count)
         self.assertEqual(concurrent, mock_timeout.call_count)
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_true(self, mock_create_session,
                                      mock_get_software_version,
-                                     mock_call_plugin):
+                                     mock_call_plugin,
+                                     mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
@@ -80,12 +86,14 @@ class SessionTestCase(base.TestCase):
             'http://someserver', 'username', 'password')
         self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_XS65_missing(self, mock_create_session,
                                              mock_get_software_version,
-                                             mock_call_plugin):
+                                             mock_call_plugin,
+                                             mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
@@ -97,12 +105,14 @@ class SessionTestCase(base.TestCase):
             'http://someserver', 'username', 'password')
         self.assertFalse(xenapi_sess.is_xsm_sr_check_relaxed())
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_XS7_missing(self, mock_create_session,
                                             mock_get_software_version,
-                                            mock_call_plugin):
+                                            mock_call_plugin,
+                                            mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '7.0.0',

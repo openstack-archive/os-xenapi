@@ -29,7 +29,6 @@ from eventlet import timeout
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from six.moves import http_client
-from six.moves import range
 from six.moves import urllib
 
 try:
@@ -57,6 +56,7 @@ def apply_session_helpers(session):
     session.VLAN = cli_objects.VLAN(session)
     session.host = cli_objects.Host(session)
     session.network = cli_objects.Network(session)
+    session.pool = cli_objects.Pool(session)
 
 
 class XenAPISession(object):
@@ -86,20 +86,20 @@ class XenAPISession(object):
         self._sessions = queue.Queue()
         self.host_checked = False
         self.url = self._create_first_session(url, user, pw)
-        self._populate_session_pool(url, user, pw)
+        self._populate_session_pool(self.url, user, pw)
         self.host_uuid = self._get_host_uuid()
         self.host_ref = self._get_host_ref()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
-        # TODO(huanxie) Uncomment _verify_plugin_version() in the future
-        # self._verify_plugin_version()
+        self._verify_plugin_version()
         self.platform_version = self._get_platform_version()
         self._cached_xsm_sr_relaxed = None
 
         apply_session_helpers(self)
 
     def _login_with_password(self, user, pw, session):
-        login_exception = exception.SessionLoginTimeout
+        login_exception = XenAPI.Failure(_("Unable to log in to XenAPI "
+                                           "(is the Dom0 disk full?)"))
         with timeout.Timeout(self.timeout, login_exception):
             session.login_with_password(user, pw, self.originator)
 
@@ -114,17 +114,28 @@ class XenAPISession(object):
             return
 
         if not versionutils.is_compatible(requested_version, current_version):
-            raise exception.OsXenApiException(
+            raise XenAPI.Failure(
                 _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %
                 {'exp': requested_version, 'got': current_version})
 
     def _create_first_session(self, url, user, pw):
         try:
             session = self._create_session_and_login(url, user, pw)
-        except exception.SessionLoginTimeout:
-            raise
+        except XenAPI.Failure as e:
+            # if user and pw of the master are different, we're doomed!
+            if e.details[0] == 'HOST_IS_SLAVE':
+                master = e.details[1]
+                url = self.swap_xapi_host(url, master)
+                session = self._create_session_and_login(url, user, pw)
+            else:
+                raise
         self._sessions.put(session)
         return url
+
+    def swap_xapi_host(self, url, host_addr):
+        """Replace the XenServer address present in 'url' with 'host_addr'."""
+        temp_url = urllib.parse.urlparse.urlparse(url)
+        return url.replace(temp_url.hostname, '%s' % host_addr)
 
     def _populate_session_pool(self, url, user, pw):
         for i in range(self.concurrent - 1):
@@ -325,18 +336,18 @@ class XenAPISession(object):
         name = '%s-%s' % (self.originator, label)
         task_ref = self.call_xenapi("task.create", name, desc)
         try:
-            LOG.debug('Created task %s with ref %s' % (name, task_ref))
+            LOG.debug('Created task %s with ref %s', name, task_ref)
             yield task_ref
         finally:
             self.call_xenapi("task.destroy", task_ref)
-            LOG.debug('Destroyed task ref %s' % task_ref)
+            LOG.debug('Destroyed task ref %s', task_ref)
 
     @contextlib.contextmanager
-    def http_connection(self, session):
+    def http_connection(self):
         conn = None
 
-        xs_url = urllib.parse.urlparse(session.url)
-        LOG.debug("Creating http(s) connection to %s" % session.url)
+        xs_url = urllib.parse.urlparse(self.url)
+        LOG.debug("Creating http(s) connection to %s", self.url)
         if xs_url.scheme == 'http':
             conn = http_client.HTTPConnection(xs_url.netloc)
         elif xs_url.scheme == 'https':
