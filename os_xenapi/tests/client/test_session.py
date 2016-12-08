@@ -13,24 +13,29 @@
 # under the License.
 
 import errno
+import os
 import socket
 
 import mock
 
 from os_xenapi.client import exception
 from os_xenapi.client import session
+from os_xenapi.client import XenAPI
 from os_xenapi.tests import base
 
 
 class SessionTestCase(base.TestCase):
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     def test_session_nova_originator(self, mock_version_and_brand,
                                      mock_create_session,
-                                     mock_platform_version):
+                                     mock_platform_version,
+                                     mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
+        version = '2.0'
         timeout = 10
         sess = mock.Mock()
         mock_create_session.return_value = sess
@@ -42,15 +47,17 @@ class SessionTestCase(base.TestCase):
                               timeout=timeout)
 
         sess.login_with_password.assert_called_with('username', 'password',
-                                                    originator)
+                                                    version, originator)
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch('eventlet.timeout.Timeout')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     def test_session_login_with_timeout(self, mock_version,
                                         create_session, mock_timeout,
-                                        mock_platform_version):
+                                        mock_platform_version,
+                                        mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
         sess = mock.Mock()
@@ -63,12 +70,14 @@ class SessionTestCase(base.TestCase):
         self.assertEqual(concurrent, sess.login_with_password.call_count)
         self.assertEqual(concurrent, mock_timeout.call_count)
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_true(self, mock_create_session,
                                      mock_get_software_version,
-                                     mock_call_plugin):
+                                     mock_call_plugin,
+                                     mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
@@ -80,12 +89,14 @@ class SessionTestCase(base.TestCase):
             'http://someserver', 'username', 'password')
         self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_XS65_missing(self, mock_create_session,
                                              mock_get_software_version,
-                                             mock_call_plugin):
+                                             mock_call_plugin,
+                                             mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
@@ -97,12 +108,14 @@ class SessionTestCase(base.TestCase):
             'http://someserver', 'username', 'password')
         self.assertFalse(xenapi_sess.is_xsm_sr_check_relaxed())
 
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, 'call_plugin')
     @mock.patch.object(session.XenAPISession, '_get_software_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     def test_relax_xsm_sr_check_XS7_missing(self, mock_create_session,
                                             mock_get_software_version,
-                                            mock_call_plugin):
+                                            mock_call_plugin,
+                                            mock_verify_plugin_version):
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '7.0.0',
@@ -230,3 +243,120 @@ class CallPluginTestCase(base.TestCase):
                 num_retries, callback, retry_cb)
             call_plugin_serialized.assert_called_with(plugin, fn)
             self.assertEqual(2, call_plugin_serialized.call_count)
+
+
+class XenAPISessionTestCase(base.TestCase):
+    def _get_mock_xapisession(self, software_version):
+        class MockXapiSession(session.XenAPISession):
+            def __init__(_ignore):
+                pass
+
+            def _get_software_version(_ignore):
+                return software_version
+
+        return MockXapiSession()
+
+    @mock.patch.object(XenAPI, 'xapi_local')
+    def test_local_session(self, mock_xapi_local):
+        session = self._get_mock_xapisession({})
+        session.is_local_connection = True
+        mock_xapi_local.return_value = "local_connection"
+        self.assertEqual("local_connection",
+                         session._create_session("unix://local"))
+
+    @mock.patch.object(XenAPI, 'Session')
+    def test_remote_session(self, mock_session):
+        session = self._get_mock_xapisession({})
+        session.is_local_connection = False
+        mock_session.return_value = "remote_connection"
+        self.assertEqual("remote_connection", session._create_session("url"))
+
+    def test_get_product_version_product_brand_does_not_fail(self):
+        session = self._get_mock_xapisession(
+            {'build_number': '0',
+             'date': '2012-08-03',
+             'hostname': 'komainu',
+             'linux': '3.2.0-27-generic',
+             'network_backend': 'bridge',
+             'platform_name': 'XCP_Kronos',
+             'platform_version': '1.6.0',
+             'xapi': '1.3',
+             'xen': '4.1.2',
+             'xencenter_max': '1.10',
+             'xencenter_min': '1.10'})
+
+        self.assertEqual(
+            ((1, 6, 0), None),
+            session._get_product_version_and_brand()
+        )
+
+    def test_get_product_version_product_brand_xs_6(self):
+        session = self._get_mock_xapisession(
+            {'product_brand': 'XenServer',
+             'product_version': '6.0.50',
+             'platform_version': '0.0.1'})
+
+        self.assertEqual(
+            ((6, 0, 50), 'XenServer'),
+            session._get_product_version_and_brand()
+        )
+
+    def test_verify_plugin_version_same(self):
+        session = self._get_mock_xapisession({})
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               spec=True) as call_plugin_serialized:
+            call_plugin_serialized.return_value = "2.4"
+            session._verify_plugin_version()
+
+    def test_verify_plugin_version_compatible(self):
+        session = self._get_mock_xapisession({})
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               spec=True) as call_plugin_serialized:
+            call_plugin_serialized.return_value = "2.5"
+            session._verify_plugin_version()
+
+    def test_verify_plugin_version_python_extensions(self):
+        # Validate that 2.0 is equivalent to 1.8
+        session = self._get_mock_xapisession({})
+        session.PLUGIN_REQUIRED_VERSION = '2.0'
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               spec=True) as call_plugin_serialized:
+            call_plugin_serialized.return_value = "1.8"
+            session._verify_plugin_version()
+
+    def test_verify_plugin_version_bad_maj(self):
+        session = self._get_mock_xapisession({})
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               spec=True) as call_plugin_serialized:
+            call_plugin_serialized.return_value = "3.0"
+            self.assertRaises(XenAPI.Failure, session._verify_plugin_version)
+
+    def test_verify_plugin_version_bad_min(self):
+        session = self._get_mock_xapisession({})
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+        with mock.patch.object(session, 'call_plugin_serialized',
+                               spec=True) as call_plugin_serialized:
+            call_plugin_serialized.return_value = "2.3"
+            self.assertRaises(XenAPI.Failure, session._verify_plugin_version)
+
+    def test_verify_current_version_matches(self):
+        session = self._get_mock_xapisession({})
+
+        # Import the plugin to extract its version
+        path = os.path.dirname(__file__)
+        rel_path_elem = "../../dom0/etc/xapi.d/plugins/dom0_plugin_version.py"
+        for elem in rel_path_elem.split('/'):
+            path = os.path.join(path, elem)
+        path = os.path.realpath(path)
+
+        plugin_version = None
+        with open(path) as plugin_file:
+            for line in plugin_file:
+                if "PLUGIN_VERSION = " in line:
+                    plugin_version = line.strip()[17:].strip('"')
+
+        self.assertEqual(session.PLUGIN_REQUIRED_VERSION,
+                         plugin_version)
