@@ -109,11 +109,6 @@ class XenAPISession(object):
         current_version = self.call_plugin_serialized(
             'dom0_plugin_version.py', 'get_version')
 
-        # v2.0 is the same as v1.8, with no version bumps. Remove this once
-        # Ocata is released
-        if requested_version == '2.0' and current_version == '1.8':
-            return
-
         if not versionutils.is_compatible(requested_version, current_version):
             raise XenAPI.Failure(
                 _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %

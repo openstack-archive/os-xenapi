@@ -318,13 +318,13 @@ class XenAPISessionTestCase(base.TestCase):
             session._verify_plugin_version()
 
     def test_verify_plugin_version_python_extensions(self):
-        # Validate that 2.0 is equivalent to 1.8
+        # Validate that 2.0 isn't equivalent to 1.8
         session = self._get_mock_xapisession({})
         session.PLUGIN_REQUIRED_VERSION = '2.0'
         with mock.patch.object(session, 'call_plugin_serialized',
                                spec=True) as call_plugin_serialized:
             call_plugin_serialized.return_value = "1.8"
-            session._verify_plugin_version()
+            self.assertRaises(XenAPI.Failure, session._verify_plugin_version)
 
     def test_verify_plugin_version_bad_maj(self):
         session = self._get_mock_xapisession({})
