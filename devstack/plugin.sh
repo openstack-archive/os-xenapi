@@ -75,6 +75,8 @@ if [[ "$MODE" == "stack" ]]; then
         test-config)
             # Called at the end of devstack used to configure tempest
             # or any other test environments
+            iniset $TEMPEST_CONFIG compute hypervisor_type XenServer
+            iniset $TEMPEST_CONFIG compute volume_device_name xvdb
             # TODO(huanxie) Maybe we can set some conf here for CI?
             ;;
     esac
