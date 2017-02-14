@@ -70,6 +70,10 @@ if [[ "$MODE" == "stack" ]]; then
         post-config)
             # Called after the layer 1 and 2 services have been configured.
             # All configuration files for enabled services should exist at this point.
+            local ssh_dom0=$(get_dom0_ssh)
+            local dom0_hostname=`$ssh_dom0 "hostname"`
+            iniset $NOVA_CONF DEFAULT host "$dom0_hostname-nova"
+            iniset $NEUTRON_CORE_PLUGIN_CONF.domU DEFAULT host "$dom0_hostname-nova"
             # TODO(huanxie): when reverse q-agt/q-domua merged, q-domua is XS specific part
             # Configure XenServer neutron specific items for q-domua
             # ovs native mode
