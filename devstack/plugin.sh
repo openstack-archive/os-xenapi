@@ -65,6 +65,9 @@ if [[ "$MODE" == "stack" ]]; then
         post-config)
             # Called after the layer 1 and 2 services have been configured.
             # All configuration files for enabled services should exist at this point.
+            local name=$(hostname)
+            iniset $NOVA_CONF DEFAULT host "$name"
+            iniset /$Q_PLUGIN_CONF_FILE.domU host "$name"
             # TODO(huanxie): when reverse q-agt/q-domua merged, q-domua is XS specific part
             # Configure XenServer neutron specific items for q-domua
             # ovs native mode
