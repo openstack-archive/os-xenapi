@@ -20,6 +20,9 @@ PHASE=$2
 
 OS_XENAPI_DIR=$DEST/os-xenapi
 
+CIRROS_VERSION="0.3.5"
+CIRROS_ARCH="x86_64"
+
 function get_dom0_ssh {
     local dom0_ip
     dom0_ip=$(echo "$XENAPI_CONNECTION_URL" | cut -d "/" -f 3)
@@ -61,6 +64,11 @@ if [[ "$MODE" == "stack" ]]; then
     case "$PHASE" in
         install)
             install_plugins
+            # set image variables
+            DEFAULT_IMAGE_NAME="cirros-${CIRROS_VERSION}-${CIRROS_ARCH}-disk"
+            DEFAULT_IMAGE_FILE_NAME="cirros-${CIRROS_VERSION}-${CIRROS_ARCH}-disk.vhd.tgz"
+            IMAGE_URLS="http://ca.downloads.xensource.com/OpenStack/cirros-${CIRROS_VERSION}-${CIRROS_ARCH}-disk.vhd.tgz"
+            IMAGE_URLS+=",http://download.cirros-cloud.net/${CIRROS_VERSION}/cirros-${CIRROS_VERSION}-x86_64-uec.tar.gz"
             ;;
         post-config)
             # Called after the layer 1 and 2 services have been configured.
@@ -77,6 +85,7 @@ if [[ "$MODE" == "stack" ]]; then
             # or any other test environments
             iniset $TEMPEST_CONFIG compute hypervisor_type XenServer
             iniset $TEMPEST_CONFIG compute volume_device_name xvdb
+            iniset $TEMPEST_CONFIG scenario img_file $DEFAULT_IMAGE_FILE_NAME
             # TODO(huanxie) Maybe we can set some conf here for CI?
             ;;
     esac
