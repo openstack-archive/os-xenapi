@@ -1,0 +1,9 @@
+Verified+1: Citrix XenServer CI
+Code-Review+2: Bob Ball <bob.ball@citrix.com>
+Workflow+1: Huan Xie <huan.xie@citrix.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 21 Feb 2017 07:58:36 +0000
+Reviewed-on: https://review.openstack.org/435398
+Project: openstack/os-xenapi
+Branch: refs/heads/master
