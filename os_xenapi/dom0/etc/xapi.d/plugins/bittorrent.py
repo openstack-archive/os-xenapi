@@ -242,7 +242,7 @@ def _active_seeder_processes():
     for pid in pids:
         try:
             cmdline = open(os.path.join('/proc', pid, 'cmdline'), 'rb').read()
-        except IOError, e:  # noqa
+        except IOError as e:  # noqa
             if e.errno != errno.ENOENT:
                 raise
 

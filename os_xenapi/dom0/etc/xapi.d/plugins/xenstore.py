@@ -75,7 +75,7 @@ def record_exists(arg_dict):
     try:
         _run_command(cmd)
         return True
-    except XenstoreError, e:    # noqa
+    except XenstoreError as e:    # noqa
         if e.stderr == '':
             # if stderr was empty, this just means the path did not exist
             return False
@@ -96,7 +96,7 @@ def read_record(self, arg_dict):
     try:
         result = _run_command(cmd)
         return result.strip()
-    except XenstoreError, e:    # noqa
+    except XenstoreError as e:    # noqa
         if not arg_dict.get("ignore_missing_path", False):
             raise
         if not record_exists(arg_dict):
@@ -136,7 +136,7 @@ def list_records(self, arg_dict):
     cmd = ["xenstore-ls", dirpath.rstrip("/")]
     try:
         recs = _run_command(cmd)
-    except XenstoreError, e:    # noqa
+    except XenstoreError as e:    # noqa
         if not record_exists(arg_dict):
             return {}
         # Just try again in case the path was created in between
@@ -170,7 +170,7 @@ def delete_record(self, arg_dict):
     cmd = ["xenstore-rm", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
     try:
         return _run_command(cmd)
-    except XenstoreError, e:    # noqa
+    except XenstoreError as e:    # noqa
         if 'could not remove path' in e.stderr:
             # Entry already gone.  We're good to go.
             return ''
@@ -214,7 +214,7 @@ def _run_command(cmd):
     """Wrap utils.run_command to raise XenstoreError on failure"""
     try:
         return utils.run_command(cmd)
-    except utils.SubprocessException, e:    # noqa
+    except utils.SubprocessException as e:    # noqa
         raise XenstoreError(e.cmdline, e.ret, e.err, e.out)
 
 if __name__ == "__main__":

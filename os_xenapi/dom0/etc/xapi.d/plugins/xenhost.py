@@ -70,7 +70,7 @@ def _run_command(cmd, cmd_input=None):
     """Wrap utils.run_command to raise PluginError on failure"""
     try:
         return utils.run_command(cmd, cmd_input=cmd_input)
-    except utils.SubprocessException, e:  # noqa
+    except utils.SubprocessException as e:  # noqa
         raise pluginlib.PluginError(e.err)
 
 

@@ -50,7 +50,7 @@ def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         if pid > 0:
             # first parent returns
             return False
-    except OSError, e:  # noqa
+    except OSError as e:  # noqa
         logging.error("fork #1 failed: %d (%s)" % (
             e.errno, e.strerror))
         return
@@ -66,7 +66,7 @@ def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         if pid > 0:
             # second parent exits
             sys.exit(0)
-    except OSError, e:  # noqa
+    except OSError as e:  # noqa
         logging.error("fork #2 failed: %d (%s)" % (
             e.errno, e.strerror))
         return

@@ -65,7 +65,7 @@ def version(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -87,7 +87,7 @@ def key_init(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -108,7 +108,7 @@ def password(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -124,7 +124,7 @@ def resetnetwork(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -170,7 +170,7 @@ def inject_file(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -190,7 +190,7 @@ def agent_update(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -206,7 +206,7 @@ def _get_agent_features(self, arg_dict):
     xenstore.write_record(self, dct)
     try:
         resp = _wait_for_agent(self, tmp_id, dct, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     response = json.loads(resp)
     if response['returncode'] != 0:

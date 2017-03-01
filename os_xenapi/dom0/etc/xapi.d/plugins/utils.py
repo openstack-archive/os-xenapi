@@ -43,7 +43,7 @@ class CommandNotFound(Exception):
 def delete_if_exists(path):
     try:
         os.unlink(path)
-    except OSError, e:  # noqa
+    except OSError as e:  # noqa
         if e.errno == errno.ENOENT:
             LOG.warning("'%s' was already deleted, skipping delete", path)
         else:
@@ -59,7 +59,7 @@ def _rename(src, dst):
     LOG.info("Renaming file '%s' -> '%s'", src, dst)
     try:
         os.rename(src, dst)
-    except OSError, e:  # noqa
+    except OSError as e:  # noqa
         if e.errno == errno.EXDEV:
             LOG.error("Invalid cross-device link.  Perhaps %s and %s should "
                       "be symlinked on the same filesystem?", src, dst)
@@ -79,7 +79,7 @@ def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
     kwargs['env'] = env
     try:
         proc = subprocess.Popen(cmdline, **kwargs)
-    except OSError, e:  # noqa
+    except OSError as e:  # noqa
         if e.errno == errno.ENOENT:
             raise CommandNotFound
         else:

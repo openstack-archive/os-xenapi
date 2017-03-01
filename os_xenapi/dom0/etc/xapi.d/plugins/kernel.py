@@ -120,7 +120,7 @@ def create_kernel_ramdisk(session, args):
 def _remove_file(filepath):
     try:
         os.remove(filepath)
-    except OSError, exc:  # noqa
+    except OSError as exc:  # noqa
         if exc.errno != errno.ENOENT:
             raise
 

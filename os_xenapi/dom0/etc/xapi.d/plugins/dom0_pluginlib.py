@@ -108,7 +108,7 @@ def with_vdi_in_dom0(session, vdi, read_only, f):
         _vbd_unplug_with_retry(session, vbd)
         try:
             session.xenapi.VBD.destroy(vbd)
-        except XenAPI.Failure, e:   # noqa
+        except XenAPI.Failure as e:   # noqa
             logging.error('Ignoring XenAPI.Failure %s', e)
         logging.debug('Destroying VBD for VDI %s done.', vdi)
 
@@ -125,7 +125,7 @@ def _vbd_unplug_with_retry(session, vbd):
             session.xenapi.VBD.unplug(vbd)
             logging.debug('VBD.unplug successful first time.')
             return
-        except XenAPI.Failure, e:   # noqa
+        except XenAPI.Failure as e:   # noqa
             if (len(e.details) > 0 and
                     e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 logging.debug('VBD.unplug rejected: retrying...')

@@ -74,11 +74,11 @@ def _download_tarball_and_verify(request, staging_path):
 
     try:
         response = urllib2.urlopen(request)
-    except urllib2.HTTPError, error:  # noqa
+    except urllib2.HTTPError as error:  # noqa
         raise RetryableError(error)
-    except urllib2.URLError, error:  # noqa
+    except urllib2.URLError as error:  # noqa
         raise RetryableError(error)
-    except httplib.HTTPException, error:  # noqa
+    except httplib.HTTPException as error:  # noqa
         # httplib.HTTPException and derivatives (BadStatusLine in particular)
         # don't have a useful __repr__ or __str__
         raise RetryableError('%s: %s' % (error.__class__.__name__, error))
@@ -96,7 +96,7 @@ def _download_tarball_and_verify(request, staging_path):
     try:
         try:
             utils.extract_tarball(response, staging_path, callback=update_md5)
-        except Exception, error:  # noqa
+        except Exception as error:  # noqa
             raise RetryableError(error)
     finally:
         bytes_read = callback_data['bytes_read']
@@ -215,7 +215,7 @@ def _upload_tarball_by_url_v1(staging_path, image_id, glance_endpoint,
 
     try:
         conn = _create_connection(parts[0], parts[1])
-    except Exception, error:  # noqa
+    except Exception as error:  # noqa
         logging.exception('Failed to connect %(url)s' % {'url': url})
         raise RetryableError(error)
 
@@ -257,7 +257,7 @@ def _upload_tarball_by_url_v1(staging_path, image_id, glance_endpoint,
             for header, value in headers.items():
                 conn.putheader(header, value)
             conn.endheaders()
-        except Exception, error:  # noqa
+        except Exception as error:  # noqa
             logging.exception('Failed to upload %(url)s' % {'url': url})
             raise RetryableError(error)
 
@@ -268,7 +268,7 @@ def _upload_tarball_by_url_v1(staging_path, image_id, glance_endpoint,
             callback_data['bytes_written'] += chunk_len
             try:
                 conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
-            except Exception, error:  # noqa
+            except Exception as error:  # noqa
                 logging.exception('Failed to upload when sending chunks')
                 raise RetryableError(error)
 
@@ -360,7 +360,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
 
     try:
         conn = _create_connection(parts[0], parts[1])
-    except Exception, error:  # noqa
+    except Exception as error:  # noqa
         raise RetryableError(error)
 
     try:
@@ -383,7 +383,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
             for header, value in headers.items():
                 conn.putheader(header, value)
             conn.endheaders()
-        except Exception, error:  # noqa
+        except Exception as error:  # noqa
             logging.exception('Failed to upload %(url)s' % {'url': url})
             raise RetryableError(error)
 
@@ -394,7 +394,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
             callback_data['bytes_written'] += chunk_len
             try:
                 conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
-            except Exception, error:  # noqa
+            except Exception as error:  # noqa
                 logging.exception('Failed to upload when sending chunks')
                 raise RetryableError(error)
 
@@ -502,7 +502,7 @@ def validate_image_status_before_upload_v1(conn, url, extra_headers):
         else:
             head_resp.read()
 
-    except Exception, error:  # noqa
+    except Exception as error:  # noqa
         logging.exception('Failed to HEAD the image %(image_id)s while '
                           'checking image status before attempting to '
                           'upload %(url)s' % {'image_id': image_id,
@@ -548,7 +548,7 @@ def validate_image_status_before_upload_v2(conn, url, extra_headers):
 
         conn.request('GET', '/v2/images/%s' % image_id, headers=extra_headers)
         get_resp = conn.getresponse()
-    except Exception, error:  # noqa
+    except Exception as error:  # noqa
         logging.exception('Failed to GET the image %(image_id)s while '
                           'checking image status before attempting to '
                           'upload %(url)s' % {'image_id': image_id,
