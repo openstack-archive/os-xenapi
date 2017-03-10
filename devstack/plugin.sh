@@ -141,7 +141,7 @@ function config_ovs_agent {
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU agent minimize_polling False
 
     # Set integration bridge for ovs-agent in compute node (q-domua)
-    iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs integration_bridge $XEN_INTEGRATION_BRIDGE
+    iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs integration_bridge $OVS_BRIDGE
 
     # Set OVS native interface for ovs-agent in compute node (q-domua)
     local dom0_ip=$(echo "$XENAPI_CONNECTION_URL" | cut -d "/" -f 3)
@@ -172,7 +172,7 @@ function config_ovs_agent {
 
 function config_nova_compute {
     iniset $NOVA_CONF xenserver vif_driver nova.virt.xenapi.vif.XenAPIOpenVswitchDriver
-    iniset $NOVA_CONF xenserver ovs_integration_bridge $XEN_INTEGRATION_BRIDGE
+    iniset $NOVA_CONF xenserver ovs_integration_bridge $OVS_BRIDGE
     iniset $NOVA_CONF DEFAULT firewall_driver nova.virt.firewall.NoopFirewallDriver
     # Configure nova-compute, use Dom0's hostname and concat suffix
     local ssh_dom0=$(get_dom0_ssh)
