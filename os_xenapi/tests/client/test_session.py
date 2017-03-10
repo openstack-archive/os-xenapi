@@ -35,7 +35,7 @@ class SessionTestCase(base.TestCase):
                                      mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
-        version = '2.0'
+        version = '2.1'
         timeout = 10
         sess = mock.Mock()
         mock_create_session.return_value = sess
