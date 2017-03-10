@@ -57,6 +57,7 @@ def apply_session_helpers(session):
     session.host = cli_objects.Host(session)
     session.network = cli_objects.Network(session)
     session.pool = cli_objects.Pool(session)
+    session.task = cli_objects.Task(session)
 
 
 class XenAPISession(object):
@@ -66,7 +67,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '2.0'
+    PLUGIN_REQUIRED_VERSION = '2.1'
 
     def __init__(self, url, user, pw, originator="os-xenapi", timeout=10,
                  concurrent=5):
