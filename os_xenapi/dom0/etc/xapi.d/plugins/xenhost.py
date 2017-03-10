@@ -260,6 +260,23 @@ def _ovs_add_port(args):
     return _run_command(cmd_args)
 
 
+def _ovs_create_port(args):
+    bridge = pluginlib.exists(args, 'bridge')
+    port = pluginlib.exists(args, 'port')
+    iface_id = pluginlib.exists(args, 'iface-id')
+    mac = pluginlib.exists(args, 'mac')
+    status = pluginlib.exists(args, 'status')
+    vif_uuid = pluginlib.exists(args, 'xs-vif-uuid')
+    cmd_args = ['ovs-vsctl', '--', '--if-exists', 'del-port', port,
+                '--', 'add-port', bridge, port,
+                '--', 'set', 'Interface', port,
+                'external-ids:iface-id=%s' % iface_id,
+                'external-ids:iface-status=%s' % status,
+                'external-ids:attached-mac=%s' % mac,
+                'external-ids:xs-vif-uuid=%s' % vif_uuid]
+    return _run_command(cmd_args)
+
+
 def _ip_link_get_dev(args):
     device_name = pluginlib.exists(args, 'device_name')
     cmd_args = ['ip', 'link', 'show', device_name]
@@ -338,6 +355,7 @@ ALLOWED_NETWORK_CMDS = {
     # allowed cmds to config OVS bridge
     'ovs_add_patch_port': _ovs_add_patch_port,
     'ovs_add_port': _ovs_add_port,
+    'ovs_create_port': _ovs_create_port,
     'ovs_del_port': _ovs_del_port,
     'ovs_del_br': _ovs_del_br,
     'ovs_set_if_external_id': _ovs_set_if_external_id,
