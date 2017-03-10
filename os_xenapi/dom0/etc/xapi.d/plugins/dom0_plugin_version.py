@@ -37,7 +37,8 @@ import utils
 # 1.7 - Add Partition utilities plugin
 # 1.8 - Add support for calling plug-ins with the .py suffix
 # 2.0 - Remove plugin files which don't have .py suffix
-PLUGIN_VERSION = "2.0"
+# 2.1 - Add interface ovs_create_port to call dom0 function
+PLUGIN_VERSION = "2.1"
 
 
 def get_version(session):
