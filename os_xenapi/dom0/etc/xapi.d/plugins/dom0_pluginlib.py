@@ -113,6 +113,9 @@ def with_vdi_in_dom0(session, vdi, read_only, f):
         logging.debug('Destroying VBD for VDI %s done.', vdi)
 
 
+DEFAULT_VDB_UNPLUG_RETRY_COUNT = 30
+
+
 def _vbd_unplug_with_retry(session, vbd):
     """Call VBD.unplug on the given VBD
 
@@ -120,6 +123,7 @@ def _vbd_unplug_with_retry(session, vbd):
     understand, we're seeing the device still in use, even when all processes
     using the device should be dead.
     """
+    retry_count = DEFAULT_VDB_UNPLUG_RETRY_COUNT
     while True:
         try:
             session.xenapi.VBD.unplug(vbd)
@@ -128,6 +132,11 @@ def _vbd_unplug_with_retry(session, vbd):
         except XenAPI.Failure, e:   # noqa
             if (len(e.details) > 0 and
                     e.details[0] == 'DEVICE_DETACH_REJECTED'):
+                retry_count -= 1
+                if (retry_count <= 0):
+                    logging.error('VBD.unplug failed after retry %s times.',
+                                  retry_count)
+                    return
                 logging.debug('VBD.unplug rejected: retrying...')
                 time.sleep(1)
             elif (len(e.details) > 0 and
