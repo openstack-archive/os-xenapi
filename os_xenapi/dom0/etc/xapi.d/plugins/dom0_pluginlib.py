@@ -120,6 +120,7 @@ def _vbd_unplug_with_retry(session, vbd):
     understand, we're seeing the device still in use, even when all processes
     using the device should be dead.
     """
+    retrycount = 30
     while True:
         try:
             session.xenapi.VBD.unplug(vbd)
@@ -128,6 +129,10 @@ def _vbd_unplug_with_retry(session, vbd):
         except XenAPI.Failure, e:   # noqa
             if (len(e.details) > 0 and
                     e.details[0] == 'DEVICE_DETACH_REJECTED'):
+                retrycount -= 1;
+                if(retrycount <= 0):
+                    logging.error('VBD.unplug failed after retry 30 times.')
+                    return
                 logging.debug('VBD.unplug rejected: retrying...')
                 time.sleep(1)
             elif (len(e.details) > 0 and
