@@ -38,6 +38,9 @@ class PluginlibDom0(plugin_test.PluginTestBase):
             self.dom0_pluginlib.logging.handlers.SysLogHandler, 'setFormatter')
         mock_Logger_addHandler = self.mock_patch_object(
             self.dom0_pluginlib.logging.Logger, 'addHandler')
+        mock_socket = self.mock_patch_object(
+            self.dom0_pluginlib.logging.handlers.SysLogHandler,
+            '_connect_unixsocket')
 
         self.dom0_pluginlib.configure_logging(name)
 
@@ -46,6 +49,7 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         self.assertTrue(mock_Formatter.called)
         self.assertTrue(mock_sysh_setFormatter.called)
         self.assertTrue(mock_Logger_addHandler.called)
+        self.assertTrue(mock_socket.called)
 
     def test_exists_ok(self):
         fake_args = {'k1': 'v1'}
