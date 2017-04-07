@@ -149,3 +149,12 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         self.dom0_pluginlib._vbd_unplug_with_retry(self.session,
                                                    'fake_vbd_ref')
         self.assertEqual(2, self.session.xenapi.VBD.unplug.call_count)
+
+    def test_vbd_unplug_with_retry_failed_at_thirty_time(self):
+        side_effects = [FakeUnplugException(['DEVICE_DETACH_REJECTED'])] * 100
+
+        self.session.xenapi.VBD.unplug.side_effect = side_effects
+        self.dom0_pluginlib.XenAPI.Failure = FakeUnplugException
+        self.dom0_pluginlib._vbd_unplug_with_retry(self.session,
+                                                   'fake_vbd_ref')
+        self.assertEqual(30, self.session.xenapi.VBD.unplug.call_count)
