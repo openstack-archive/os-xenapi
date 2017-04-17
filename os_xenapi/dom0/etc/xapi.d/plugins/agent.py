@@ -43,6 +43,8 @@ import dom0_pluginlib
 dom0_pluginlib.configure_logging("agent")
 import xenstore
 
+from exceptions import NotImplementedError
+
 
 DEFAULT_TIMEOUT = 30
 PluginError = dom0_pluginlib.PluginError
@@ -257,10 +259,10 @@ def _wait_for_agent(self, request_id, arg_dict, timeout):
 
     if reboot_detected:
         raise RebootDetectedError("REBOOT: dom_id %s no longer "
-                                  "present") % arg_dict["dom_id"]
+                                  "present" % arg_dict["dom_id"])
     else:
         raise TimeoutError("TIMEOUT: No response from agent within"
-                           " %s seconds.") % timeout
+                           " %s seconds." % timeout)
 
 
 if __name__ == "__main__":
