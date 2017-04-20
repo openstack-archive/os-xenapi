@@ -14,6 +14,7 @@
 #    under the License.
 
 from os_xenapi.tests.plugins import plugin_test
+import time
 
 
 class FakeUnplugException(Exception):
@@ -155,9 +156,11 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         self.assertEqual(2, self.session.xenapi.VBD.unplug.call_count)
 
     def test_vbd_unplug_with_retry_exceed_max_attempts(self):
+        self.mock_patch_object(time,
+                               'sleep',
+                               True)
         side_effects = ([FakeUnplugException(['DEVICE_DETACH_REJECTED'])]
                         * (self.dom0_pluginlib.MAX_VBD_UNPLUG_RETRIES + 1))
-
         self.session.xenapi.VBD.unplug.side_effect = side_effects
         self.dom0_pluginlib.XenAPI.Failure = FakeUnplugException
 
