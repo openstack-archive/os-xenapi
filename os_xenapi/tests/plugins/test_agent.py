@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import mock
 from os_xenapi.tests.plugins import plugin_test
 import time
 try:
@@ -333,16 +334,14 @@ class WaitForAgentTestCase(plugin_test.PluginTestBase):
                                                            tmp_arg_dict)
         self.assertNotEqual(self.agent._wait_for_agent, '"None"')
 
-    def test_wait_for_agent_reboot_detected_exception(self):
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_agent_reboot_detected_exception(self, mock_sleep):
         tmp_arg_dict = FAKE_ARG_DICT
         tmp_arg_dict["path"] = "data/guest/%s" % 'fake_id'
         tmp_arg_dict["ignore_missing_path"] = True
         self.mock_patch_object(self.agent.xenstore,
                                'read_record',
                                '"None"')
-        self.mock_patch_object(time,
-                               'sleep',
-                               True)
         self.mock_patch_object(self.agent.xenstore,
                                'record_exists',
                                False)
@@ -365,26 +364,22 @@ class WaitForAgentTestCase(plugin_test.PluginTestBase):
         self.agent.xenstore.delete_record.assert_called_with(self.agent,
                                                              tmp_arg_dict)
 
-    def test_wait_for_agent_timeout_exception(self):
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(time, 'time')
+    def test_wait_for_agent_timeout_exception(self, mock_time, mock_sleep):
         tmp_arg_dict = FAKE_ARG_DICT
         tmp_arg_dict["path"] = "data/guest/%s" % 'fake_id'
         tmp_arg_dict["ignore_missing_path"] = True
         self.mock_patch_object(self.agent.xenstore,
                                'read_record',
                                '"None"')
-        self.mock_patch_object(time,
-                               'time',
-                               True)
-        time.time.side_effect = list(range(31))
-        self.mock_patch_object(time,
-                               'sleep',
-                               True)
         self.mock_patch_object(self.agent.xenstore,
                                'record_exists',
                                True)
         self.mock_patch_object(self.agent.xenstore,
                                'delete_record',
                                'fake_del_record')
+        mock_time.side_effect = list(range(self.agent.DEFAULT_TIMEOUT + 1))
 
         self.assertRaises(self.agent.TimeoutError,
                           self.agent._wait_for_agent,
