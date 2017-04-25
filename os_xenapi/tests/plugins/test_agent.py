@@ -41,6 +41,18 @@ class FakeTimeoutException(Exception):
 class AgentTestCase(plugin_test.PluginTestBase):
     def setUp(self):
         super(AgentTestCase, self).setUp()
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+
+        self.dom0_pluginlib = self.load_plugin("dom0_pluginlib.py")
+        # Prevent any logging to syslog
+        self.mock_patch_object(self.dom0_pluginlib,
+                               'configure_logging')
+
+>>>>>>> e61382e... os-xenapi: add unit tests for agent.py
+>>>>>>> ac060df... os-xenapi: add unit tests for agent.py
         self.agent = self.load_plugin("agent.py")
         self.mock_patch_object(self.agent,
                                '_wait_for_agent',
@@ -315,6 +327,18 @@ class AgentTestCase(plugin_test.PluginTestBase):
 class WaitForAgentTestCase(plugin_test.PluginTestBase):
     def setUp(self):
         super(WaitForAgentTestCase, self).setUp()
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+        
+        self.dom0_pluginlib = self.load_plugin("dom0_pluginlib.py")
+        # Prevent any logging to syslog
+        self.mock_patch_object(self.dom0_pluginlib,
+                               'configure_logging')
+
+>>>>>>> e61382e... os-xenapi: add unit tests for agent.py
+>>>>>>> ac060df... os-xenapi: add unit tests for agent.py
         self.agent = self.load_plugin("agent.py")
 
     def test_wait_for_agent_ok(self):
