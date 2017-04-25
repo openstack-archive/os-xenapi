@@ -24,6 +24,7 @@
 
 import logging
 import logging.handlers
+import os
 import time
 
 import XenAPI
@@ -37,6 +38,8 @@ MAX_VBD_UNPLUG_RETRIES = 30
 def configure_logging(name):
     log = logging.getLogger()
     log.setLevel(logging.DEBUG)
+    if not os.path.exists('/dev/log'):
+        return
     sysh = logging.handlers.SysLogHandler('/dev/log')
     sysh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%s: %%(levelname)-8s %%(message)s' % name)

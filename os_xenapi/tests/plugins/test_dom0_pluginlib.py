@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+import os
 from os_xenapi.tests.plugins import plugin_test
 import time
 
@@ -28,7 +29,8 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         super(PluginlibDom0, self).setUp()
         self.dom0_pluginlib = self.load_plugin("dom0_pluginlib.py")
 
-    def test_configure_logging(self):
+    @mock.patch.object(os.path, 'exists')
+    def test_configure_logging_log_dir_not_exist(self, mock_path_not_exist):
         name = 'fake_name'
         mock_Logger_setLevel = self.mock_patch_object(
             self.dom0_pluginlib.logging.Logger, 'setLevel')
@@ -43,6 +45,34 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         mock_socket = self.mock_patch_object(
             self.dom0_pluginlib.logging.handlers.SysLogHandler,
             '_connect_unixsocket')
+        mock_path_not_exist.return_value = False
+
+        self.dom0_pluginlib.configure_logging(name)
+
+        self.assertTrue(mock_Logger_setLevel.called)
+        self.assertFalse(mock_sysh_setLevel.called)
+        self.assertFalse(mock_Formatter.called)
+        self.assertFalse(mock_sysh_setFormatter.called)
+        self.assertFalse(mock_Logger_addHandler.called)
+        self.assertFalse(mock_socket.called)
+
+    @mock.patch.object(os.path, 'exists')
+    def test_configure_logging_log(self, mock_path_exist):
+        name = 'fake_name'
+        mock_Logger_setLevel = self.mock_patch_object(
+            self.dom0_pluginlib.logging.Logger, 'setLevel')
+        mock_sysh_setLevel = self.mock_patch_object(
+            self.dom0_pluginlib.logging.handlers.SysLogHandler, 'setLevel')
+        mock_Formatter = self.mock_patch_object(
+            self.dom0_pluginlib.logging, 'Formatter')
+        mock_sysh_setFormatter = self.mock_patch_object(
+            self.dom0_pluginlib.logging.handlers.SysLogHandler, 'setFormatter')
+        mock_Logger_addHandler = self.mock_patch_object(
+            self.dom0_pluginlib.logging.Logger, 'addHandler')
+        mock_socket = self.mock_patch_object(
+            self.dom0_pluginlib.logging.handlers.SysLogHandler,
+            '_connect_unixsocket')
+        mock_path_exist.return_value = True
 
         self.dom0_pluginlib.configure_logging(name)
 
