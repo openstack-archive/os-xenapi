@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+import os
 from os_xenapi.tests.plugins import plugin_test
 import time
 
@@ -29,6 +30,8 @@ class PluginlibDom0(plugin_test.PluginTestBase):
         self.dom0_pluginlib = self.load_plugin("dom0_pluginlib.py")
 
     def test_configure_logging(self):
+        if not os.path.isdir('/dev/log'):
+            return
         name = 'fake_name'
         mock_Logger_setLevel = self.mock_patch_object(
             self.dom0_pluginlib.logging.Logger, 'setLevel')
