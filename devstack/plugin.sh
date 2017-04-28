@@ -51,22 +51,18 @@ function install_dom0_plugins {
     plugin_dir=$(sudo -H pip show os-xenapi |grep "Location:"|cut -d " " -f 2-)
     if [ -z "$plugin_dir" ]; then
         pip_install_gr xenapi
+
+        # copy nova dom0 plugin to dom0
         plugin_dir=$DEST/nova
         tar -czf - -C $plugin_dir/plugins/xenserver/xenapi/etc/xapi.d/plugins/ ./ |
             $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
-    else
-        # TODO(huanxie): delete "pip_install_gr xenapi" when neutron changed to use os-xenapi
-        pip_install_gr xenapi
-        tar -czf - -C $plugin_dir/os_xenapi/dom0/etc/xapi.d/plugins/ ./ |
-            $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
-    fi
 
-    # TODO(huanxie): delete below when neutron's xs dom0 plugin moved to os-xenapi
-    # install neutron dom0 plugins as it's not moved to os-xenapi
-    local neutron_xapi_dir
-    neutron_xapi_dir=$NEUTRON_DIR/neutron/plugins/ml2/drivers/openvswitch/agent/xenapi/etc/xapi.d/plugins
-    if [ -e "$neutron_xapi_dir" ]; then
-        tar -czf - -C $neutron_xapi_dir/ ./ |
+        # copy neutron dom0 plugin to dom0
+        plugin_dir=$DEST/neutron
+        tar -czf - -C $plugin_dir/neutron/plugins/ml2/drivers/openvswitch/agent/xenapi/etc/xapi.d/plugins/ ./ |
+            $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
+    else
+        tar -czf - -C $plugin_dir/os_xenapi/dom0/etc/xapi.d/plugins/ ./ |
             $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
     fi
 }
