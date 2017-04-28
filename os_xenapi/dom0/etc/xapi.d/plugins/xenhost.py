@@ -116,7 +116,7 @@ def set_host_enabled(self, arg_dict):
     elif enabled == "false":
         result = _run_command(["xe", "host-disable", "uuid=%s" % host_uuid])
     else:
-        raise pluginlib.PluginError("Illegal enabled status: %s") % enabled
+        raise pluginlib.PluginError("Illegal enabled status: %s" % enabled)
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
@@ -449,7 +449,7 @@ def host_join(self, arg_dict):
     compute_ref = session.xenapi.VM.get_by_uuid(arg_dict.get('compute_uuid'))
     session.xenapi.VM.clean_shutdown(compute_ref)
     try:
-        if arg_dict.get("force"):
+        if arg_dict.get("force", "false") == "false":
             session.xenapi.pool.join(arg_dict.get("master_addr"),
                                      arg_dict.get("master_user"),
                                      arg_dict.get("master_pass"))
@@ -520,11 +520,12 @@ def cleanup(dct):
 #    out["host_crash-dump-sr-uuid"] = dct.get("crash-dump-sr-uuid", "")
 #    out["host_local-cache-sr"] = dct.get("local-cache-sr", "")
     out["enabled"] = dct.get("enabled", "true") == "true"
-    out["host_memory"] = omm = {}
+    omm = {}
     omm["total"] = safe_int(dct.get("memory-total", ""))
     omm["overhead"] = safe_int(dct.get("memory-overhead", ""))
     omm["free"] = safe_int(dct.get("memory-free", ""))
     omm["free-computed"] = safe_int(dct.get("memory-free-computed", ""))
+    out["host_memory"] = omm
 
 #    out["host_API-version"] = avv = {}
 #    avv["vendor"] = dct.get("API-version-vendor", "")
@@ -540,11 +541,12 @@ def cleanup(dct):
     out["host_hostname"] = dct.get("hostname", "")
     out["host_ip_address"] = dct.get("address", "")
     oc = dct.get("other-config", "")
-    out["host_other-config"] = ocd = {}
+    ocd = {}
     if oc:
         for oc_fld in oc.split("; "):
             ock, ocv = strip_kv(oc_fld)
             ocd[ock] = ocv
+    out["host_other-config"] = ocd
 
     capabilities = dct.get("capabilities", "")
     out["host_capabilities"] = capabilities.replace(";", "").split()
@@ -566,7 +568,7 @@ def cleanup(dct):
 #            svk, svv = strip_kv(svln)
 #            osv[svk] = svv
     cpuinf = dct.get("cpu_info", "")
-    out["host_cpu_info"] = ocp = {}
+    ocp = {}
     if cpuinf:
         for cpln in cpuinf.split("; "):
             cpk, cpv = strip_kv(cpln)
@@ -574,6 +576,7 @@ def cleanup(dct):
                 ocp[cpk] = safe_int(cpv)
             else:
                 ocp[cpk] = cpv
+    out["host_cpu_info"] = ocp
 #    out["host_edition"] = dct.get("edition", "")
 #    out["host_external-auth-service-name"] = dct.get(
 #            "external-auth-service-name", "")
