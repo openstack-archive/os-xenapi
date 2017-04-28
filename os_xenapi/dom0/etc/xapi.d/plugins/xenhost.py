@@ -449,7 +449,7 @@ def host_join(self, arg_dict):
     compute_ref = session.xenapi.VM.get_by_uuid(arg_dict.get('compute_uuid'))
     session.xenapi.VM.clean_shutdown(compute_ref)
     try:
-        if arg_dict.get("force"):
+        if arg_dict.get("force", "false") == "false":
             session.xenapi.pool.join(arg_dict.get("master_addr"),
                                      arg_dict.get("master_user"),
                                      arg_dict.get("master_pass"))
