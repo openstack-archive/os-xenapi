@@ -19,6 +19,10 @@ except ImportError:
     import simplejson as json
 import mock
 from mock import call
+try:
+    import json
+except ImportError:
+    import simplejson as json
 from os_xenapi.tests.plugins import plugin_test
 import time
 
@@ -419,3 +423,80 @@ class HostOptTestCase(plugin_test.PluginTestBase):
         uptime_return = self.host.host_uptime(self.host, 'fake_arg_dict')
 
         self.assertEqual(uptime_return, '{"uptime": "fake_uptime"}')
+
+
+class ConfigOptTestCase(plugin_test.PluginTestBase):
+    def setUp(self):
+        super(ConfigOptTestCase, self).setUp()
+        self.host = self.load_plugin("xenhost.py")
+        self.pluginlib = self.load_plugin("dom0_pluginlib.py")
+        self.mock_patch_object(self.host,
+                               '_run_command',
+                               'fake_run_cmd_return')
+
+    def test_get_config_no_config_key(self):
+        temp_dict = {'params': '{"key": "fake_key"}'}
+        fake_conf_dict = {}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), "None")
+        self.host._get_config_dict.assert_called_once
+
+    def test_get_config_config_key_not_none(self):
+        temp_dict = {'params': '{"key": "fake_key"}'}
+        fake_conf_dict = {'fake_key': 'fake_conf_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), 'fake_conf_key')
+        self.host._get_config_dict.assert_called_once
+
+    def test_get_config_json_load_exception(self):
+        temp_dict = {'params': {"key": "fake_key"}}
+        fake_conf_dict = {'fake_key': 'fake_conf_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), 'fake_conf_key')
+        self.host._get_config_dict.assert_called_once
+
+    @mock.patch.object(json, 'loads')
+    def test_set_config_remove_none_key(self, mock_json_loads):
+        temp_arg_dict = {'params': 'fake_params'}
+        temp_dict = {'key': 'fake_key', 'value': None}
+        mock_json_loads.return_value = temp_dict
+        temp_conf = {temp_dict['key']: 'fake_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               temp_conf)
+        self.mock_patch_object(self.host,
+                               '_write_config_dict')
+
+        self.host.set_config(self.host, temp_arg_dict)
+        self.assertTrue("fake_key" not in temp_conf)
+        self.host._get_config_dict.assert_called_once()
+        temp_conf.pop('key', None)
+        self.host._write_config_dict.assert_called_with(temp_conf)
+
+    @mock.patch.object(json, 'loads')
+    def test_set_config_overwrite_key_value(self, mock_json_loads):
+        temp_arg_dict = {'params': 'fake_params'}
+        temp_dict = {'key': 'fake_key', 'value': 'not_none'}
+        mock_json_loads.return_value = temp_dict
+        temp_conf = {temp_dict['key']: 'fake_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               temp_conf)
+        self.mock_patch_object(self.host,
+                               '_write_config_dict')
+
+        self.host.set_config(self.host, temp_arg_dict)
+        self.assertTrue('fake_key' in temp_conf)
+        self.host._get_config_dict.assert_called_once()
+        temp_conf.update({temp_dict['key']: temp_dict['value']})
+        self.host._write_config_dict.assert_called_with(temp_conf)
