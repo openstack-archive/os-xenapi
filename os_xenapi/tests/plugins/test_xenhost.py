@@ -419,3 +419,74 @@ class HostOptTestCase(plugin_test.PluginTestBase):
         uptime_return = self.host.host_uptime(self.host, 'fake_arg_dict')
 
         self.assertEqual(uptime_return, '{"uptime": "fake_uptime"}')
+
+
+class ConfigOptTestCase(plugin_test.PluginTestBase):
+    def setUp(self):
+        super(ConfigOptTestCase, self).setUp()
+        self.host = self.load_plugin("xenhost.py")
+        self.pluginlib = self.load_plugin("dom0_pluginlib.py")
+        self.mock_patch_object(self.host,
+                               '_run_command',
+                               'fake_run_cmd_return')
+
+    def test_get_config_no_config_key(self):
+        temp_dict = {'params': '{"key": "fake_key"}'}
+        fake_conf_dict = {}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), "None")
+        self.host._get_config_dict.assert_called_once
+
+    def test_get_config_json(self):
+        temp_dict = {'params': '{"key": "fake_key"}'}
+        fake_conf_dict = {'fake_key': 'fake_conf_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), 'fake_conf_key')
+        self.host._get_config_dict.assert_called_once
+
+    def test_get_config_dict(self):
+        temp_dict = {'params': {"key": "fake_key"}}
+        fake_conf_dict = {'fake_key': 'fake_conf_key'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               fake_conf_dict)
+        config_return = self.host.get_config(self.host, temp_dict)
+        self.assertEqual(json.loads(config_return), 'fake_conf_key')
+        self.host._get_config_dict.assert_called_once
+
+    def test_set_config_remove_none_key(self):
+        temp_arg_dict = {'params': {"key": "fake_key", "value": None}}
+        temp_conf = {'fake_key': 'fake_value'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               temp_conf)
+        self.mock_patch_object(self.host,
+                               '_write_config_dict')
+
+        self.host.set_config(self.host, temp_arg_dict)
+        self.assertTrue("fake_key" not in temp_conf)
+        self.host._get_config_dict.assert_called_once()
+        temp_conf.pop('key', None)
+        self.host._write_config_dict.assert_called_with(temp_conf)
+
+    def test_set_config_overwrite_key_value(self):
+        temp_arg_dict = {'params': {"key": "fake_key", "value": "new_value"}}
+        temp_conf = {'fake_key': 'fake_value'}
+        self.mock_patch_object(self.host,
+                               '_get_config_dict',
+                               temp_conf)
+        self.mock_patch_object(self.host,
+                               '_write_config_dict')
+
+        self.host.set_config(self.host, temp_arg_dict)
+        self.assertTrue('fake_key' in temp_conf)
+        self.host._get_config_dict.assert_called_once()
+        temp_conf.update({'fake_key': 'new_value'})
+        self.host._write_config_dict.assert_called_with(temp_conf)
