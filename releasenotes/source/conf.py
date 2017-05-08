@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'os_xenapi Release Notes'
-copyright = u'2016, OpenStack Foundation'
+copyright = u'2016, Citrix Systems'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
