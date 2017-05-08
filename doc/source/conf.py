@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'os-xenapi'
-copyright = u'2016, OpenStack Foundation'
+copyright = u'2016, Citrix Systems'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 add_function_parentheses = True
@@ -68,7 +68,7 @@ latex_documents = [
     ('index',
      '%s.tex' % project,
      u'%s Documentation' % project,
-     u'OpenStack Foundation', 'manual'),
+     u'Citrix Systems', 'manual'),
 ]
 
 # Example configuration for intersphinx: refer to the Python standard library.
