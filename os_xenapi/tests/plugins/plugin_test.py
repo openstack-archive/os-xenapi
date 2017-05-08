@@ -1,4 +1,4 @@
-# Copyright (c) 2016 OpenStack Foundation
+# Copyright (c) 2016 Citrix Systems
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
