@@ -143,7 +143,7 @@ def _download_tarball_v1(sr_path, staging_path, image_id, glance_host,
 def _download_tarball_by_url_v1(
         sr_path, staging_path, image_id, glance_endpoint, extra_headers):
     # Download the tarball image from Glance v1 and extract it into the
-    # staging area. Retry if there is any failure.
+    # staging area.
     url = "%(glance_endpoint)s/v1/images/%(image_id)s" % {
         'glance_endpoint': glance_endpoint,
         'image_id': image_id}
@@ -160,7 +160,7 @@ def _download_tarball_by_url_v1(
 def _download_tarball_by_url_v2(
         sr_path, staging_path, image_id, glance_endpoint, extra_headers):
     # Download the tarball image from Glance v2 and extract it into the
-    # staging area. Retry if there is any failure.
+    # staging area.
     url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
         'glance_endpoint': glance_endpoint,
         'image_id': image_id}
