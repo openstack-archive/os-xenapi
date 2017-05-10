@@ -317,7 +317,7 @@ def _update_image_meta_v2(conn, image_id, extra_headers, properties):
 
     for key, value in properties.items():
         prop = {"path": "/%s" % key.replace('_', '-'),
-                "value": key,
+                "value": value,
                 "op": "add"}
         body.append(prop)
     body = json.dumps(body)
