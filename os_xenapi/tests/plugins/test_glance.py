@@ -20,15 +20,21 @@ try:
     import urllib2
     from urllib2 import HTTPError
     from urllib2 import URLError
+    from urlparse import urlparse
 except ImportError:
     # make py3.x happy: it's needed for script parsing, although this test
     # is excluded from py3.x testing
     import http.client as httplib
     from urllib.error import HTTPError
     from urllib.error import URLError
+    from urllib.parse import urlparse
     import urllib.request as urllib2
-
+import json
 from os_xenapi.tests.plugins import plugin_test
+
+
+class Fake_HTTP_Request_Error(Exception):
+    pass
 
 
 class GlanceTestCase(plugin_test.PluginTestBase):
@@ -409,3 +415,321 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         self.assertTrue(
             mock_HTTPSConn.return_value.getresponse.called)
         self.assertTrue(mock_check_resp_status.called)
+
+    def test_update_image_meta_ok_v2(self):
+        fake_conn = mock.Mock()
+        fake_extra_headers = {'fake_type': 'fake_content'}
+        fake_properties = {'fake_path': True}
+        new_fake_properties = {'path': '/fake-path',
+                               'value': "True",
+                               'op': 'add'}
+        fake_body = [
+            {"path": "/container_format", "value": "ovf", "op": "add"},
+            {"path": "/disk_format", "value": "vhd", "op": "add"},
+            {"path": "/visibility", "value": "private", "op": "add"}]
+        fake_body.append(new_fake_properties)
+        fake_body_json = json.dumps(fake_body)
+        fake_headers = {
+            'Content-Type': 'application/openstack-images-v2.1-json-patch'}
+        fake_headers.update(**fake_extra_headers)
+        fake_conn.getresponse.return_value = mock.Mock()
+        fake_conn.getresponse().status = httplib.OK
+
+        self.glance._update_image_meta_v2(fake_conn, 'fake_image_id',
+                                          fake_extra_headers, fake_properties)
+        fake_conn.request.assert_called_with('PATCH',
+                                             '/v2/images/%s' % 'fake_image_id',
+                                             body=fake_body_json,
+                                             headers=fake_headers)
+        fake_conn.getresponse.assert_called()
+
+    def test_check_resp_status_and_retry_plugin_error(self):
+        mock_resp_badrequest = mock.Mock()
+        mock_resp_badrequest.status = httplib.BAD_REQUEST
+
+        self.assertRaises(
+            self.glance.PluginError,
+            self.glance.check_resp_status_and_retry,
+            mock_resp_badrequest,
+            'fake_image_id',
+            'fake_url')
+
+    def test_check_resp_status_and_retry_retry_error(self):
+        mock_resp_badgateway = mock.Mock()
+        mock_resp_badgateway.status = httplib.BAD_GATEWAY
+
+        self.assertRaises(
+            self.glance.RetryableError,
+            self.glance.check_resp_status_and_retry,
+            mock_resp_badgateway,
+            'fake_image_id',
+            'fake_url')
+
+    def test_check_resp_status_and_retry_unknown_status(self):
+        fake_unknown_http_status = -1
+        mock_resp_other = mock.Mock()
+        mock_resp_other.status = fake_unknown_http_status
+
+        self.assertRaises(
+            self.glance.RetryableError,
+            self.glance.check_resp_status_and_retry,
+            mock_resp_other,
+            'fake_image_id',
+            'fake_url')
+
+    def test_validate_image_status_before_upload_ok_v1(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_check_resp_status_and_retry = self.mock_patch_object(
+            self.glance, 'check_resp_status_and_retry')
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = 'fakeData'
+        mock_head_resp.getheader.return_value = 'queued'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.glance.validate_image_status_before_upload_v1(
+            mock_conn, fake_url, extra_headers=mock.Mock())
+
+        self.assertTrue(mock_conn.getresponse.called)
+        self.assertEqual(mock_head_resp.read.call_count, 2)
+        self.assertFalse(mock_check_resp_status_and_retry.called)
+
+    def test_validate_image_status_before_upload_image_status_error_v1(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = 'fakeData'
+        mock_head_resp.getheader.return_value = 'not-queued'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.assertRaises(self.glance.PluginError,
+                          self.glance.validate_image_status_before_upload_v1,
+                          mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_conn.getresponse.assert_called_once()
+        self.assertEqual(mock_head_resp.read.call_count, 2)
+
+    def test_validate_image_status_before_upload_rep_body_too_long_v1(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = 'fakeData longer than 8'
+        mock_head_resp.getheader.return_value = 'queued'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.assertRaises(self.glance.RetryableError,
+                          self.glance.validate_image_status_before_upload_v1,
+                          mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_conn.getresponse.assert_called_once()
+        mock_head_resp.read.assert_called_once()
+
+    def test_validate_image_status_before_upload_req_head_exception_v1(self):
+        mock_conn = mock.Mock()
+        mock_conn.request.side_effect = Fake_HTTP_Request_Error()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = 'fakeData'
+        mock_head_resp.getheader.return_value = 'queued'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.assertRaises(self.glance.RetryableError,
+                          self.glance.validate_image_status_before_upload_v1,
+                          mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_head_resp.read.assert_not_called()
+        mock_conn.getresponse.assert_not_called()
+
+    def test_validate_image_status_before_upload_unexpected_resp_v1(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        parts = urlparse(fake_url)
+        path = parts[2]
+        fake_image_id = path.split('/')[-1]
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.BAD_REQUEST
+        mock_head_resp.read.return_value = 'fakeData'
+        mock_head_resp.getheader.return_value = 'queued'
+        mock_conn.getresponse.return_value = mock_head_resp
+        self.mock_patch_object(self.glance, 'check_resp_status_and_retry')
+
+        self.glance.validate_image_status_before_upload_v1(
+            mock_conn, fake_url, extra_headers=mock.Mock())
+        self.assertEqual(mock_head_resp.read.call_count, 2)
+        self.glance.check_resp_status_and_retry.assert_called_with(
+            mock_head_resp, fake_image_id, fake_url)
+        mock_conn.request.assert_called_once()
+
+    def test_validate_image_status_before_upload_ok_v2(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_check_resp_status_and_retry = self.mock_patch_object(
+            self.glance, 'check_resp_status_and_retry')
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = '{"status": "queued"}'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.glance.validate_image_status_before_upload_v2(
+            mock_conn, fake_url, extra_headers=mock.Mock())
+
+        self.assertTrue(mock_conn.getresponse.called)
+        self.assertEqual(
+            mock_head_resp.read.call_count, 2)
+        self.assertFalse(mock_check_resp_status_and_retry.called)
+        mock_conn.request.assert_called_once()
+
+    def test_validate_image_status_before_upload_get_image_failed_v2(self):
+        mock_conn = mock.Mock()
+        mock_conn.request.side_effect = Fake_HTTP_Request_Error()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.assertRaises(self.glance.RetryableError,
+                          self.glance.validate_image_status_before_upload_v2,
+                          mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_head_resp.read.assert_not_called()
+        mock_conn.getresponse.assert_not_called()
+
+    def test_validate_image_status_before_upload_unexpected_resp_v2(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        self.mock_patch_object(self.glance, 'check_resp_status_and_retry')
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.BAD_REQUEST
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.glance.validate_image_status_before_upload_v2(
+            mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_conn.getresponse.assert_called_once()
+        mock_head_resp.read.assert_called_once()
+        self.glance.check_resp_status_and_retry.assert_called_once()
+
+    def test_validate_image_status_before_upload_failed_v2(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host/fake_path/fake_image_id'
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = '{"status": "not-queued"}'
+        mock_conn.getresponse.return_value = mock_head_resp
+
+        self.assertRaises(self.glance.PluginError,
+                          self.glance.validate_image_status_before_upload_v2,
+                          mock_conn, fake_url, extra_headers=mock.Mock())
+        mock_conn.request.assert_called_once()
+        mock_head_resp.read.assert_called_once()
+
+    def test_download_vhd2_v1(self):
+        fake_api_version = 1
+        mock_make_staging_area = self.mock_patch_object(
+            self.glance.utils, 'make_staging_area', 'fake_staging_path')
+        mock_download_tarball_by_url = self.mock_patch_object(
+            self.glance, '_download_tarball_by_url_v1')
+        mock_import_vhds = self.mock_patch_object(
+            self.glance.utils, 'import_vhds')
+        mock_cleanup_staging_area = self.mock_patch_object(
+            self.glance.utils, 'cleanup_staging_area')
+
+        self.glance.download_vhd2(
+            'fake_session', 'fake_image_id', 'fake_endpoint',
+            'fake_uuid_stack', 'fake_sr_path', 'fake_extra_headers',
+            fake_api_version)
+
+        mock_make_staging_area.assert_called_with('fake_sr_path')
+        mock_download_tarball_by_url.assert_called_with('fake_sr_path',
+                                                        'fake_staging_path',
+                                                        'fake_image_id',
+                                                        'fake_endpoint',
+                                                        'fake_extra_headers')
+        mock_import_vhds.assert_called_with('fake_sr_path',
+                                            'fake_staging_path',
+                                            'fake_uuid_stack')
+        mock_cleanup_staging_area.assert_called_with('fake_staging_path')
+
+    def test_download_vhd2_v2(self):
+        fake_api_version = 2
+        mock_make_staging_area = self.mock_patch_object(
+            self.glance.utils, 'make_staging_area', 'fake_staging_path')
+        mock_download_tarball_by_url = self.mock_patch_object(
+            self.glance, '_download_tarball_by_url_v2')
+        mock_import_vhds = self.mock_patch_object(
+            self.glance.utils, 'import_vhds')
+        mock_cleanup_staging_area = self.mock_patch_object(
+            self.glance.utils, 'cleanup_staging_area')
+
+        self.glance.download_vhd2(
+            'fake_session', 'fake_image_id', 'fake_endpoint',
+            'fake_uuid_stack', 'fake_sr_path', 'fake_extra_headers',
+            fake_api_version)
+
+        mock_make_staging_area.assert_called_with('fake_sr_path')
+        mock_download_tarball_by_url.assert_called_with('fake_sr_path',
+                                                        'fake_staging_path',
+                                                        'fake_image_id',
+                                                        'fake_endpoint',
+                                                        'fake_extra_headers')
+        mock_import_vhds.assert_called_with('fake_sr_path',
+                                            'fake_staging_path',
+                                            'fake_uuid_stack')
+        mock_cleanup_staging_area.assert_called_with('fake_staging_path')
+
+    def test_upload_vhd2_v1(self):
+        fake_api_version = 1
+        mock_make_staging_area = self.mock_patch_object(
+            self.glance.utils, 'make_staging_area', 'fake_staging_path')
+        mock_prepare_staging_area = self.mock_patch_object(
+            self.glance.utils, 'prepare_staging_area')
+        mock_upload_tarball_by_url = self.mock_patch_object(
+            self.glance, '_upload_tarball_by_url_v1')
+        mock_cleanup_staging_area = self.mock_patch_object(
+            self.glance.utils, 'cleanup_staging_area')
+
+        self.glance.upload_vhd2(
+            'fake_session', 'fake_vid_uuids', 'fake_image_id',
+            'fake_endpoint', 'fake_sr_path', 'fake_extra_headers',
+            'fake_properties', fake_api_version)
+        mock_make_staging_area.assert_called_with('fake_sr_path')
+        mock_upload_tarball_by_url.assert_called_with('fake_staging_path',
+                                                      'fake_image_id',
+                                                      'fake_endpoint',
+                                                      'fake_extra_headers',
+                                                      'fake_properties')
+        mock_prepare_staging_area.assert_called_with('fake_sr_path',
+                                                     'fake_staging_path',
+                                                     'fake_vid_uuids')
+        mock_cleanup_staging_area.assert_called_with('fake_staging_path')
+
+    def test_upload_vhd2_v2(self):
+        fake_api_version = 2
+        mock_make_staging_area = self.mock_patch_object(
+            self.glance.utils, 'make_staging_area', 'fake_staging_path')
+        mock_prepare_staging_area = self.mock_patch_object(
+            self.glance.utils, 'prepare_staging_area')
+        mock_upload_tarball_by_url = self.mock_patch_object(
+            self.glance, '_upload_tarball_by_url_v2')
+        mock_cleanup_staging_area = self.mock_patch_object(
+            self.glance.utils, 'cleanup_staging_area')
+
+        self.glance.upload_vhd2(
+            'fake_session', 'fake_vid_uuids', 'fake_image_id',
+            'fake_endpoint', 'fake_sr_path', 'fake_extra_headers',
+            'fake_properties', fake_api_version)
+
+        mock_make_staging_area.assert_called_with('fake_sr_path')
+        mock_upload_tarball_by_url.assert_called_with('fake_staging_path',
+                                                      'fake_image_id',
+                                                      'fake_endpoint',
+                                                      'fake_extra_headers',
+                                                      'fake_properties')
+        mock_prepare_staging_area.assert_called_with('fake_sr_path',
+                                                     'fake_staging_path',
+                                                     'fake_vid_uuids')
+        mock_cleanup_staging_area.assert_called_with('fake_staging_path')
