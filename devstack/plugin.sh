@@ -176,6 +176,23 @@ function config_nova_compute {
     iniset $NOVA_CONF DEFAULT host "${dom0_hostname}-nova"
 }
 
+function config_ceilometer {
+    if is_service_enabled ceilometer-acompute; then
+        local ssh_dom0=$(get_dom0_ssh)
+        local dom0_hostname=`$ssh_dom0 "hostname"`
+        iniset $CEILOMETER_CONF DEFAULT host "${dom0_hostname}-nova"
+        iniset $CEILOMETER_CONF DEFAULT hypervisor_inspector xenapi
+
+        iniset $CEILOMETER_CONF xenapi connection_url "$XENAPI_CONNECTION_URL"
+        iniset $CEILOMETER_CONF xenapi connection_username "$XENAPI_USER"
+        iniset $CEILOMETER_CONF xenapi connection_password "$XENAPI_PASSWORD"
+
+        # For XenAPI driver, we cannot use default value "libvirt_metadata"
+        # https://github.com/openstack/ceilometer/blob/master/ceilometer/compute/discovery.py#L125
+        iniset $CEILOMETER_CONF compute instance_discovery_method naive
+    fi
+}
+
 # Start neutron-openvswitch-agent for Dom0 (q-domua)
 function start_ovs_agent {
     local config_file="--config-file $NEUTRON_CONF --config-file $NEUTRON_CORE_PLUGIN_CONF.domU"
@@ -199,6 +216,12 @@ function stop_ovs_agent {
         stop_process q-domua
     else
         stop_process neutron-agent-dom0
+    fi
+}
+
+function start_ceilometer_acompute {
+    if is_service_enabled ceilometer-acompute; then
+        run_process ceilometer-acompute "$CEILOMETER_BIN_DIR/ceilometer-polling --polling-namespaces compute --config-file $CEILOMETER_CONF"
     fi
 }
 
@@ -243,10 +266,12 @@ if [[ "$MODE" == "stack" ]]; then
             # Configure XenServer neutron specific items for q-domua and n-cpu
             config_nova_compute
             config_ovs_agent
+            config_ceilometer
             ;;
         extra)
             # Called near the end after layer 1 and 2 services have been started
             start_ovs_agent
+            start_ceilometer_acompute
             ;;
         test-config)
             # Called at the end of devstack used to configure tempest
