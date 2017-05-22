@@ -1,0 +1,91 @@
+#!/bin/bash
+
+#introduce from other files
+
+CONFIG_AWK_CMD=${CONFIG_AWK_CMD:-awk}
+
+# Get the section for the specific group and config file
+# get_meta_section infile group configfile
+function get_meta_section {
+    local file=$1
+    local matchgroup=$2
+    local configfile=$3
+
+    [[ -r $file ]] || return 0
+    [[ -z $configfile ]] && return 0
+
+    $CONFIG_AWK_CMD -v matchgroup=$matchgroup -v configfile=$configfile '
+        BEGIN { group = "" }
+        /^\[\[.+\|.*\]\]/ {
+            gsub("[][]", "", $1);
+            split($1, a, "|");
+            if (a[1] == matchgroup && a[2] == configfile) {
+                group=a[1]
+            } else {
+                group=""
+            }
+            next
+        }
+        {
+            if (group != "")
+                print $0
+        }
+    ' $file
+}
+
+# Get a list of config files for a specific group
+# get_meta_section_files infile group
+function get_meta_section_files {
+    local file=$1
+    local matchgroup=$2
+
+    [[ -r $file ]] || return 0
+
+    $CONFIG_AWK_CMD -v matchgroup=$matchgroup '
+        /^\[\[.+\|.*\]\]/ {
+            gsub("[][]", "", $1);
+            split($1, a, "|");
+            if (a[1] == matchgroup)
+                print a[2]
+        }
+    ' $file
+}
+
+function extract_localrc_section {
+    local configfile=$1    # top_dir/local.conf
+    local localrcfile=$2   # top_dir/localrc
+    local localautofile=$3 # top_dir/.localrc.auto
+
+    if [[ -r $configfile ]]; then
+        LRC=$(get_meta_section_files $configfile local)
+        for lfile in $LRC; do
+            if [[ "$lfile" == "localrc" ]]; then
+                if [[ -r $localrcfile ]]; then
+                    echo "localrc and local.conf:[[local]] both exist, using localrc"
+                else
+                    echo "# Generated file, do not edit" >$localautofile
+                    get_meta_section $configfile local $lfile >>$localautofile
+                fi
+            fi
+        done
+    fi
+}
+
+# enable_plugin <name> <url> [branch]
+#
+# ``name`` is an arbitrary name - (aka: glusterfs, nova-docker, zaqar)
+# ``url`` is a git url
+# ``branch`` is a gitref. If it's not set, defaults to master
+function enable_plugin {
+    local name=$1
+    local url=$2
+    local branch=${3:-master}
+    if [[ ",${DEVSTACK_PLUGINS}," =~ ,${name}, ]]; then
+        die $LINENO "Plugin attempted to be enabled twice: ${name} ${url} ${branch}"
+    fi
+    DEVSTACK_PLUGINS+=",$name"
+    GITREPO[$name]=$url
+    GITDIR[$name]=$DEST/$name
+    GITBRANCH[$name]=$branch
+}
+
