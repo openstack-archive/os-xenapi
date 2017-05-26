@@ -22,11 +22,11 @@ CONF_DIR="$THIS_DIR/conf"
 # Include onexit commands
 . $SCRIPT_DIR/on_exit.sh
 
-# xapi functions
+# xapi functions:q
 
 . $COMM_DIR/functions
 
-# Source params - override xenrc params in your local.conf to suit your taste
+# Source params - override xenrc params in your localrc to suit your taste
 source $CONF_DIR/xenrc
 
 #
