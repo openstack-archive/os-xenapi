@@ -351,11 +351,10 @@ function install_conntrack_tools {
 # Wait for VM to halt
 #
 function wait_for_VM_to_halt {
-    XENAPI_CONNT_URL="$1"
+    mgmt_ip="$1"
     GUEST_VM_NAME="$2"
     set +x
     echo "Waiting for the VM to halt.  Progress in-VM can be checked with XenCenter or xl console:"
-    mgmt_ip=$(echo $XENAPI_CONNT_URL | tr -d -c '1234567890.')
     domid=$(get_domid "$GUEST_VM_NAME")
     echo "ssh root@$mgmt_ip \"xl console $domid\""
     while true; do
