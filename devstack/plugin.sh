@@ -245,6 +245,29 @@ function cleanup_dom0_iptables {
     $_ERREXIT_XENSERVER
 }
 
+# Prepare directories for kernels and images in Dom0
+function create_dom0_kernel_and_image_dir {
+    local ssh_dom0=$(get_dom0_ssh)
+
+    {
+        echo "set -eux"
+        cat $OS_XENAPI_DIR/devstack/dom0_functions
+        echo "create_directory_for_images"
+        echo "create_directory_for_kernels"
+    } | $ssh_dom0
+}
+
+# Install conntrack-tools in Dom0
+function install_dom0_conntrack {
+    local ssh_dom0=$(get_dom0_ssh)
+
+    {
+        echo "set -eux"
+        cat $OS_XENAPI_DIR/devstack/dom0_functions
+        echo "install_conntrack_tools"
+    } | $ssh_dom0
+}
+
 if [[ "$MODE" == "stack" ]]; then
     case "$PHASE" in
         pre-install)
@@ -254,6 +277,8 @@ if [[ "$MODE" == "stack" ]]; then
             # Called after the layer 1 and 2 projects source and their dependencies have been installed
             install_dom0_plugins
             config_dom0_iptables
+            install_dom0_conntrack
+            create_dom0_kernel_and_image_dir
             # set image variables
             DEFAULT_IMAGE_NAME="cirros-${CIRROS_VERSION}-${CIRROS_ARCH}-disk"
             DEFAULT_IMAGE_FILE_NAME="cirros-${CIRROS_VERSION}-${CIRROS_ARCH}-disk.vhd.tgz"
