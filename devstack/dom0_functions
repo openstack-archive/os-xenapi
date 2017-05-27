@@ -9,3 +9,68 @@ function dom0_plugin_location {
     done
     return 1
 }
+
+function get_local_sr {
+    xe pool-list params=default-SR minimal=true
+}
+
+function get_local_sr_path {
+    pbd_device_config_path=`xe pbd-list sr-uuid=$(get_local_sr) params=device-config | grep " path: "`
+    if [ -n "$pbd_device_config_path" ]; then
+        pbd_uuid=`xe pbd-list sr-uuid=$(get_local_sr) minimal=true`
+        pbd_path=`xe pbd-param-get uuid=$pbd_uuid param-name=device-config param-key=path || echo ""`
+    else
+        pbd_path="/var/run/sr-mount/$(get_local_sr)"
+    fi
+
+    if [ -d "$pbd_path" ]; then
+        echo $pbd_path
+        return 0
+    else
+        return 1
+    fi
+}
+
+function create_directory_for_images {
+    if [ -d "/images" ]; then
+        echo "INFO: /images directory already exists, using that" >&2
+    else
+        local local_path
+        local_path="$(get_local_sr_path)/os-images"
+        mkdir -p $local_path
+        ln -s $local_path /images
+    fi
+}
+
+function create_directory_for_kernels {
+    if [ -d "/boot/guest" ]; then
+        echo "INFO: /boot/guest directory already exists, using that" >&2
+    else
+        local local_path
+        local_path="$(get_local_sr_path)/os-guest-kernels"
+        mkdir -p $local_path
+        ln -s $local_path /boot/guest
+    fi
+}
+
+function install_conntrack_tools {
+    local xs_host
+    local xs_ver_major
+    local centos_ver
+    local conntrack_conf
+    xs_host=$(xe host-list --minimal)
+    xs_ver_major=$(xe host-param-get uuid=$xs_host param-name=software-version param-key=product_version_text_short | cut -d'.' -f 1)
+    if [ $xs_ver_major -gt 6 ]; then
+        # Only support conntrack-tools in Dom0 with XS7.0 and above
+        if [ ! -f /usr/sbin/conntrackd ]; then
+            sed -i s/#baseurl=/baseurl=/g /etc/yum.repos.d/CentOS-Base.repo
+            centos_ver=$(yum version nogroups |grep Installed | cut -d' ' -f 2 | cut -d'/' -f 1 | cut -d'-' -f 1)
+            yum install -y --enablerepo=base --releasever=$centos_ver conntrack-tools
+            # Backup conntrackd.conf after install conntrack-tools, use the one with statistic mode
+            mv /etc/conntrackd/conntrackd.conf /etc/conntrackd/conntrackd.conf.back
+            conntrack_conf=$(find /usr/share/doc -name conntrackd.conf |grep stats)
+            cp $conntrack_conf /etc/conntrackd/conntrackd.conf
+        fi
+        service conntrackd restart
+    fi
+}
