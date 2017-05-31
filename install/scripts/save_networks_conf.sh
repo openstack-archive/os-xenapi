@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# This script is run by install-devstack-xen.sh
+# This script is run by install_os_domU.sh
 #
-# It modifies the ubuntu image created by config_devstack_domu_vm.sh
-# and previously moodified by config_devstack_domu_vm.sh
+# It modifies the ubuntu image created by install_os_domU.sh
+# and previously moodified by prepare_guest_template.sh
 #
 # This script is responsible for:
 # - pushing in the DevStack code
@@ -11,7 +11,7 @@
 # It does this by mounting the disk image of the VM.
 #
 # The resultant image is then templated and started
-# by config_devstack_domu_vm.sh
+# by install_os_domU.sh
 
 # Exit on errors
 set -o errexit

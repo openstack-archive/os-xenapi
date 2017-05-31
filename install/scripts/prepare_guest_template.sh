@@ -54,9 +54,10 @@ fi
 mkdir -p $STAGING_DIR/opt/stack/
 cp $SCRIPT_DIR/prepare_guest.sh $STAGING_DIR/opt/stack/prepare_guest.sh
 
-# backup rc.local
+# backup rc.local32rtf
 cp $STAGING_DIR/etc/rc.local $STAGING_DIR/etc/rc.local.preparebackup
 
+echo "$STAGING_DIR/etc/rc.local"
 # run prepare_guest.sh on boot
 cat <<EOF >$STAGING_DIR/etc/rc.local
 #!/bin/sh -e
@@ -64,7 +65,7 @@ bash /opt/stack/prepare_guest.sh \\
     "$GUEST_PASSWORD" "$STACK_USER" "$DOMZERO_USER" \\
     > /opt/stack/prepare_guest.log 2>&1
 EOF
-
+echo "$STAGING_DIR/etc/apt/sources.list"
 # Update ubuntu repositories
 cat > $STAGING_DIR/etc/apt/sources.list << EOF
 deb http://${UBUNTU_INST_HTTP_HOSTNAME}${UBUNTU_INST_HTTP_DIRECTORY} ${UBUNTU_INST_RELEASE} main restricted

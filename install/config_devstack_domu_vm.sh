@@ -12,8 +12,6 @@ set -o xtrace
 
 export LC_ALL=C
 
-XENAPI_CONNECTION_IP="$1"
-
 # This directory
 THIS_DIR=$(cd $(dirname "$0") && pwd)
 SCRIPT_DIR="$THIS_DIR/scripts"
@@ -76,6 +74,8 @@ fi
 # Enable ip forwarding at runtime as well
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
+HOST_IP=$(xenapi_ip_on "$MGT_BRIDGE_OR_NET_NAME")
+
 #install the previous ubuntu VM
 
 vm_exist=$(xe vm-list name-label="$DEV_STACK_DOMU_NAME" --minimal)
@@ -110,7 +110,7 @@ add_interface "$DEV_STACK_DOMU_NAME" "$MGT_BRIDGE_OR_NET_NAME" "0"
 xe vm-start vm="$DEV_STACK_DOMU_NAME"
 
 # Wait for prep script to finish and shutdown system
-wait_for_VM_to_halt "$XENAPI_CONNECTION_IP" "$DEV_STACK_DOMU_NAME"
+wait_for_VM_to_halt "$DEV_STACK_DOMU_NAME"
 
 ## Setup network cards
 # Wipe out all
@@ -123,7 +123,7 @@ add_interface "$DEV_STACK_DOMU_NAME" "$MGT_BRIDGE_OR_NET_NAME" "$MGT_DEV_NR"
 add_interface "$DEV_STACK_DOMU_NAME" "$PUB_BRIDGE_OR_NET_NAME" "$PUB_DEV_NR"
 
 #
-# config network
+# config inside VM disk
 #
 $SCRIPT_DIR/save_networks_conf.sh "$DEV_STACK_DOMU_NAME"
 
@@ -198,6 +198,10 @@ echo "ssh-keygen -f /home/$DOMZERO_USER/.ssh/id_rsa -C $DOMZERO_USER@appliance -
 
 # Authenticate that user to dom0
 run_on_appliance cat /home/$DOMZERO_USER/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+
+# If we have copied our ssh credentials, use ssh to monitor while the installation runs
+WAIT_TILL_LAUNCH=${WAIT_TILL_LAUNCH:-1}
+COPYENV=${COPYENV:-1}
 
 echo "################################################################################"
 echo ""
