@@ -192,10 +192,13 @@ else
     echo "the template has already exist"
 fi
 template_uuid=$(xe_min template-list name-label="$TNAME")
-echo "$template_uuid"
 exist_val=$(xe template-param-get uuid=$template_uuid param-name=PV-args)
-echo "$exist_val"
 if [ -n "$exist_val" ];
     then
     xe template-param-set uuid=$template_uuid PV-args=""
 fi
+set +x
+echo "################################################################################"
+echo ""
+echo "Template create done!"
+echo "################################################################################"
