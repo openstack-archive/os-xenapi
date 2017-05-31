@@ -6,7 +6,7 @@
 #
 
 # Name of this guest
-GUEST_NAME=${GUEST_NAME:-CleanUbuntuVM}
+GUEST_NAME=${GUEST_NAME:-UbuntuVM}
 
 # Template cleanup
 CLEAN_TEMPLATES=${CLEAN_TEMPLATES:-false}
@@ -18,8 +18,6 @@ SNAME_TEMPLATE="jeos_snapshot_for_ubuntu"
 # such as blkfront failing to plug a VBD and lead to random test fails.
 #
 # Set to 6GB so an 8GB XenServer VM can have a 1GB Dom0 and leave 1GB for VMs
-OSDOMU_MEM_MB=6144
-OSDOMU_VDI_GB=8
 
 # Size of image
 VDI_MB=${VDI_MB:-5000}
@@ -29,11 +27,11 @@ VDI_MB=${VDI_MB:-5000}
 # such as blkfront failing to plug a VBD and lead to random test fails.
 #
 # Set to 6GB so an 8GB XenServer VM can have a 1GB Dom0 and leave 1GB for VMs
-CLEAN_VM_MEM_MB=6144
-CLEAN_VM_VDI_GB=8
+VM_MEM_MB=6144
+VM_VDI_GB=${VM_VDI_GB:-30}
 
 # VM Password
-GUEST_PASSWORD=${GUEST_PASSWORD:-secret}
+GUEST_PASSWORD=${GUEST_PASSWORD:-admin}
 
 # Extracted variables for OpenStack VM network device numbers.
 # Make sure they form a continuous sequence starting from 0
@@ -105,10 +103,17 @@ DOMZERO_USER=domzero
 # Get the management network from the XS installation
 VM_BRIDGE_OR_NET_NAME="OpenStack VM Network"
 PUB_BRIDGE_OR_NET_NAME="OpenStack Public Network"
-XEN_INT_BRIDGE_OR_NET_NAME="OpenStack VM Integration Network"
 
 # Extracted variables for OpenStack VM network device numbers.
 # Make sure they form a continuous sequence starting from 0
 MGT_DEV_NR=0
 VM_DEV_NR=1
 PUB_DEV_NR=2
+
+# VM Network
+VM_IP=${VM_IP:-10.255.255.255}
+VM_NETMASK=${VM_NETMASK:-255.255.255.0}
+
+# Public network
+PUB_IP=${PUB_IP:-172.24.4.1}
+PUB_NETMASK=${PUB_NETMASK:-255.255.255.0}
