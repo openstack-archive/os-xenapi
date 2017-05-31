@@ -64,34 +64,6 @@ EOF
 exit 1
 }
 
-function find_ip_by_name {
-    local guest_name="$1"
-    local interface="$2"
-
-    local period=10
-    local max_tries=10
-    local i=0
-
-    while true; do
-        if [ $i -ge $max_tries ]; then
-            echo "Timeout: ip address for interface $interface of $guest_name"
-            exit 11
-        fi
-
-        ipaddress=$(xe vm-list --minimal \
-                    name-label=$guest_name \
-                    params=networks | sed -ne "s,^.*${interface}/ip: \([0-9.]*\).*\$,\1,p")
-
-        if [ -z "$ipaddress" ]; then
-            sleep $period
-            i=$((i+1))
-        else
-            echo $ipaddress
-            break
-        fi
-    done
-}
-
 # Defaults for optional arguments
 DEVSTACK_SRC=${DEVSTACK_SRC:-"https://github.com/openstack-dev/devstack"}
 OS_XENAPI_SRC=${OS_XENAPI_SRC:-"https://github.com/openstack/os-xenapi/archive/master.zip"}
@@ -448,16 +420,14 @@ DOM0_OPT_DIR=$TMPDIR/domU
 DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
 DOM0_OS_API_DIR="$DOM0_OS_API_UNZIP_DIR/os-xenapi-*"
 DOM0_INSTALL_DIR="$DOM0_OS_API_DIR/install"
+DOM0_TOOL_DIR="$DOM0_OS_API_DIR/tools"
 copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
     mkdir $DOM0_OPT_DIR
     cd $DOM0_OPT_DIR
     wget --no-check-certificate "$OS_XENAPI_SRC"
     unzip -o master.zip -d $DOM0_OS_API_UNZIP_DIR
-    if [ ! -f "$DOM0_INSTALL_DIR/install_on_xen_host.sh" ]; then
-        cp -rf /tmp/install $DOM0_OS_API_DIR
-    fi
-    cd $DOM0_INSTALL_DIR
 
+    cd $DOM0_INSTALL_DIR
 cat << LOCALCONF_CONTENT_ENDS_HERE > local.conf
 # ``local.conf`` is a user-maintained settings file that is sourced from ``stackrc``.
 # This gives it the ability to override any variables set in ``stackrc``.
@@ -532,7 +502,8 @@ disk_allocation_ratio = 2.0
 LOCALCONF_CONTENT_ENDS_HERE
 
 # begin installation process
-./install_on_xen_host.sh $XENSERVER_PASS -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
+cd $DOM0_TOOL_DIR
+./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
 
 END_OF_XENSERVER_COMMANDS
 
