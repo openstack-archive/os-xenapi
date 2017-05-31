@@ -45,26 +45,40 @@ function install_dom0_plugins {
     local dom0_plugin_dir
     dom0_plugin_dir=`$ssh_dom0 "$dom0_func; set -eux; dom0_plugin_location"`
 
-    # Get the path that os-xenapi is installed or the path that nova source code resides
-    # Note: This aims to be compatible whenever dom0 plugin is in os-xenapi repo or in nova repo
+    # We've moved the plugins from neutron/nova to os-xenapi, but in some stable branches the
+    # plugins are still located in neutron (ocata and backforward branches) or nove (Newton
+    # and backforward branches). In order to upport both stable and master branches, let's
+    # check the existing for the potential plugin direcotries. And copy them if exist.
     local plugin_dir
-    plugin_dir=$(sudo -H pip show os-xenapi |grep "Location:"|cut -d " " -f 2-)
-    if [ -z "$plugin_dir" ]; then
-        pip_install_gr xenapi
-
-        # copy nova dom0 plugin to dom0
-        plugin_dir=$DEST/nova
-        tar -czf - -C $plugin_dir/plugins/xenserver/xenapi/etc/xapi.d/plugins/ ./ |
-            $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
-
-        # copy neutron dom0 plugin to dom0
-        plugin_dir=$DEST/neutron
-        tar -czf - -C $plugin_dir/neutron/plugins/ml2/drivers/openvswitch/agent/xenapi/etc/xapi.d/plugins/ ./ |
-            $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
-    else
-        tar -czf - -C $plugin_dir/os_xenapi/dom0/etc/xapi.d/plugins/ ./ |
-            $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir && chmod a+x $dom0_plugin_dir/*"
+    local need_install_xenapi=False
+    # for neutron plugins
+    plugin_dir=$DEST/neutron/neutron/plugins/ml2/drivers/openvswitch/agent/xenapi/etc/xapi.d/plugins/
+    if [ -d $plugin_dir ]; then
+        need_install_xenapi=True
+        tar -czf - -C $plugin_dir ./ | $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir"
     fi
+    # for nova plugins
+    plugin_dir=$DEST/nova/plugins/xenserver/xenapi/etc/xapi.d/plugins/
+    if [ -d $plugin_dir ]; then
+        need_install_xenapi=True
+        tar -czf - -C $plugin_dir ./ | $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir"
+    fi
+
+    if [ "$need_install_xenapi" = "True" ]; then
+        # Either neutron or nova need XenAPI, install XenAPI.
+        pip_install_gr xenapi
+    fi
+
+    # Get the path that os-xenapi is installed or the path that nova source code resides
+    os_xenapi_dir=$(sudo -H pip show os-xenapi |grep "Location:"|cut -d " " -f 2-)
+    if [ -n "$os_xenapi_dir" ]; then
+        plugin_dir=$os_xenapi_dir/os_xenapi/dom0/etc/xapi.d/plugins/
+        if [ -d $plugin_dir ]; then
+            tar -czf - -C $plugin_dir ./ | $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir"
+        fi
+    fi
+    # change plugins to be executable
+    $ssh_dom0 "chmod a+x $dom0_plugin_dir/*"
 }
 
 # Config iptables in Dom0
