@@ -37,6 +37,10 @@ optional arguments:
                        before running any tests.  The host will not be rebooted after
                        installing the supplemental pack, so new kernels will not be
                        picked up.
+ -o OS_XENAPI_SRC      An URL point to a zip file for os-xenapi, This defaults to the
+                       official os-xenapi repository.
+ -w WAIT_TILL_LAUNCH   Set it to 1 if user want to pending on the installation until
+                       it is done
 
 flags:
  -f                 Force SR replacement. If your XenServer has an LVM type SR,
@@ -61,7 +65,8 @@ exit 1
 }
 
 # Defaults for optional arguments
-DEVSTACK_SRC="https://github.com/openstack-dev/devstack/archive/master.tar.gz"
+DEVSTACK_SRC=${DEVSTACK_SRC:-"https://github.com/openstack-dev/devstack"}
+OS_XENAPI_SRC=${OS_XENAPI_SRC:-"https://github.com/openstack/os-xenapi/archive/master.zip"}
 TEST_TYPE="none"
 FORCE_SR_REPLACEMENT="false"
 EXIT_AFTER_JEOS_INSTALLATION=""
@@ -69,7 +74,9 @@ LOG_FILE_DIRECTORY=""
 JEOS_URL=""
 JEOS_FILENAME=""
 SUPP_PACK_URL=""
-SCREEN_LOGDIR="/opt/stack/devstack_logs"
+LOGDIR="/opt/stack/devstack_logs"
+DEV_STACK_DOMU_NAME=${DEV_STACK_DOMU_NAME:-DevStackOSDomU}
+WAIT_TILL_LAUNCH=1
 
 # Get Positional arguments
 set +u
@@ -86,7 +93,7 @@ REMAINING_OPTIONS="$#"
 
 # Get optional parameters
 set +e
-while getopts ":t:d:fnl:j:e:s:" flag; do
+while getopts ":t:d:fnl:j:e:s:w:" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         t)
@@ -122,12 +129,29 @@ while getopts ":t:d:fnl:j:e:s:" flag; do
             SUPP_PACK_URL="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
+        o)
+            OS_XENAPI_SRC="$OPTARG"
+            REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
+        w)
+            WAIT_TILL_LAUNCH="$OPTARG"
+            REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
         \?)
             print_usage_and_die "Invalid option -$OPTARG"
             ;;
     esac
 done
+
 set -e
+if [ "$TEST_TYPE" != "none" ] && [ $WAIT_TILL_LAUNCH -ne 1 ]; then
+    echo "WARNING: You can't perform a test even before the insallation done, force set WAIT_TILL_LAUNCH to 1"
+    WAIT_TILL_LAUNCH=1
+fi
+
+if [ "$TEST_TYPE" != "none" ] && [ "$EXIT_AFTER_JEOS_INSTALLATION" = "true" ]; then
+    print_usage_and_die "ERROR: You can't perform a test without a devstack invironment, exit"
+fi
 
 # Make sure that all options processed
 if [ "0" != "$REMAINING_OPTIONS" ]; then
@@ -152,6 +176,8 @@ XENSERVER_PASS: $XENSERVER_PASS
 PRIVKEY:        $PRIVKEY
 TEST_TYPE:      $TEST_TYPE
 DEVSTACK_SRC:   $DEVSTACK_SRC
+OS_XENAPI_SRC:  $OS_XENAPI_SRC
+
 
 FORCE_SR_REPLACEMENT: $FORCE_SR_REPLACEMENT
 JEOS_URL:             ${JEOS_URL:-template will not be imported}
@@ -175,6 +201,12 @@ function assert_tool_exists() {
     fi
 }
 
+DEFAULT_SR_ID=$(on_xenserver <<EOF
+xe pool-list params=default-SR minimal=true
+EOF
+)
+TMP_TEMPLATE_DIR=/var/run/sr-mount/$DEFAULT_SR_ID/devstack_template
+
 if [ -z "$JEOS_FILENAME" ]; then
     if [ "$PRIVKEY" != "-" ]; then
       echo "Setup ssh keys on XenServer..."
@@ -196,21 +228,26 @@ if [ -z "$JEOS_FILENAME" ]; then
     fi
 else
     echo -n "Exporting JeOS template..."
+    echo "template will save to $TMP_TEMPLATE_DIR"
+
     on_xenserver << END_OF_EXPORT_COMMANDS
 set -eu
+
+mkdir -p $TMP_TEMPLATE_DIR
+
 JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
 
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: jeos_template_for_devstack not found"
     exit 1
 fi
-rm -f /root/jeos-for-devstack.xva
-xe template-export template-uuid="\$JEOS_TEMPLATE" filename="/root/jeos-for-devstack.xva" compress=true
+rm -rf $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
+xe template-export template-uuid="\$JEOS_TEMPLATE" filename="\$TMP_TEMPLATE_DIR/jeos-for-devstack.xva" compress=true
 END_OF_EXPORT_COMMANDS
     echo "OK"
 
     echo -n "Copy exported template to local file..."
-    if scp -3 $_SSH_OPTIONS "root@$XENSERVER:/root/jeos-for-devstack.xva" "$JEOS_FILENAME"; then
+    if scp -3 $_SSH_OPTIONS "root@$XENSERVER:$TMP_TEMPLATE_DIR/jeos-for-devstack.xva" "$JEOS_FILENAME"; then
         echo "OK"
         RETURN_CODE=0
     else
@@ -220,13 +257,12 @@ END_OF_EXPORT_COMMANDS
     echo "Cleanup: delete exported template from XenServer"
     on_xenserver << END_OF_CLEANUP
 set -eu
-rm -f /root/jeos-for-devstack.xva
+
+rm -rf $TMP_TEMPLATE_DIR
 END_OF_CLEANUP
     echo "JeOS export done, exiting."
     exit $RETURN_CODE
 fi
-
-TMPDIR=$(echo "mktemp -d" | on_xenserver)
 
 function copy_logs_on_failure() {
     set +e
@@ -243,18 +279,15 @@ function copy_logs() {
     if [ -n "$LOG_FILE_DIRECTORY" ]; then
         on_xenserver << END_OF_XENSERVER_COMMANDS
 set -xu
-cd $TMPDIR
-cd devstack*
 
 mkdir -p /root/artifacts
-
-GUEST_IP=\$(. "tools/xen/functions" && find_ip_by_name DevStackOSDomU 0)
+GUEST_IP=\$(. "$COMM_DIR/functions" && find_ip_by_name $DEV_STACK_DOMU_NAME 0)
 if [ -n \$GUEST_IP ]; then
 ssh -q \
     -o Batchmode=yes \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
-    stack@\$GUEST_IP "tar --ignore-failed-read -czf - ${SCREEN_LOGDIR}/* /opt/stack/tempest/*.xml" > \
+    stack@\$GUEST_IP "tar --ignore-failed-read -czf - ${LOGDIR}/* /opt/stack/tempest/*.xml" > \
     /root/artifacts/domU.tgz < /dev/null || true
 fi
 tar --ignore-failed-read -czf /root/artifacts/dom0.tgz /var/log/messages* /var/log/xensource* /var/log/SM* || true
@@ -349,29 +382,13 @@ SUPP_PACK
     sleep 10m
 fi
 
-echo -n "Hack ISCSISR.py on XenServer (original saved to /root/ISCSISR.py.orig)..."
-on_xenserver << HACK_ISCSI_SR
-set -eu
-
-iscsi_target_file=""
-for candidate_file in "/opt/xensource/sm/ISCSISR.py" "/usr/lib64/xcp-sm/ISCSISR.py"; do
-    if [ -e "\$candidate_file" ]; then
-        iscsi_target_file=\$candidate_file
-    fi
-done
-if [ -n "\$iscsi_target_file" ]; then
-    if ! [ -e "/root/ISCSISR.py.orig" ]; then
-        cp \$iscsi_target_file /root/ISCSISR.py.orig
-    fi
-    sed -e "s/'phy'/'aio'/g" /root/ISCSISR.py.orig > \$iscsi_target_file
-fi
-HACK_ISCSI_SR
-echo "OK"
-
 if [ -n "$JEOS_URL" ]; then
     echo "(re-)importing JeOS template"
     on_xenserver << END_OF_JEOS_IMPORT
 set -eu
+
+mkdir -p $TMP_TEMPLATE_DIR
+
 JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
 
 if [ -n "\$JEOS_TEMPLATE" ]; then
@@ -379,12 +396,12 @@ if [ -n "\$JEOS_TEMPLATE" ]; then
     xe template-uninstall template-uuid="\$JEOS_TEMPLATE" force=true > /dev/null
 fi
 
-rm -f /root/jeos-for-devstack.xva
-echo "  downloading $JEOS_URL to /root/jeos-for-devstack.xva"
-wget -qO /root/jeos-for-devstack.xva "$JEOS_URL"
-echo "  importing /root/jeos-for-devstack.xva"
-xe vm-import filename=/root/jeos-for-devstack.xva
-rm -f /root/jeos-for-devstack.xva
+rm -f $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
+echo "  downloading $JEOS_URL to $TMP_TEMPLATE_DIR/jeos-for-devstack.xva"
+wget -qO $TMP_TEMPLATE_DIR/jeos-for-devstack.xva "$JEOS_URL"
+echo "  importing $TMP_TEMPLATE_DIR/jeos-for-devstack.xva"
+xe vm-import filename=$TMP_TEMPLATE_DIR/jeos-for-devstack.xva
+rm -rf $TMP_TEMPLATE_DIR
 echo "  verify template imported"
 JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
 if [ -z "\$JEOS_TEMPLATE" ]; then
@@ -396,35 +413,20 @@ END_OF_JEOS_IMPORT
     echo "OK"
 fi
 
-if [ -e $DEVSTACK_SRC ]; then
-copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
-set -eu
+TMPDIR=$(echo "mktemp -d" | on_xenserver)
 
-mkdir -p $TMPDIR/devstack-local
-END_OF_XENSERVER_COMMANDS
-    scp $_SSH_OPTIONS -r $DEVSTACK_SRC/* "root@$XENSERVER:$TMPDIR/devstack-local"
-else
-copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
-set -exu
-
-cd $TMPDIR
-
-wget "$DEVSTACK_SRC" -O _devstack.tgz
-tar -xzf _devstack.tgz
-cd devstack*
-END_OF_XENSERVER_COMMANDS
-fi
-
-# set nounset for $NOVA_CONF
 set +u
-
+DOM0_OPT_DIR=$TMPDIR/domU
+DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
+DOM0_OS_API_DIR="$DOM0_OS_API_UNZIP_DIR/os-xenapi-*"
+DOM0_TOOL_DIR="$DOM0_OS_API_DIR/tools"
+DOM0_INSTALL_DIR="$DOM0_TOOL_DIR/install"
 copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
-set -exu
-
-cd $TMPDIR
-
-cd devstack*
-
+    mkdir $DOM0_OPT_DIR
+    cd $DOM0_OPT_DIR
+    wget --no-check-certificate "$OS_XENAPI_SRC"
+    unzip -o master.zip -d $DOM0_OS_API_UNZIP_DIR
+    cd $DOM0_INSTALL_DIR
 cat << LOCALCONF_CONTENT_ENDS_HERE > local.conf
 # ``local.conf`` is a user-maintained settings file that is sourced from ``stackrc``.
 # This gives it the ability to override any variables set in ``stackrc``.
@@ -448,7 +450,6 @@ SWIFT_HASH="66a3d6b56c1f479c8b4e70ab5c2000f5"
 # Nice short names, so we could export an XVA
 VM_BRIDGE_OR_NET_NAME="osvmnet"
 PUB_BRIDGE_OR_NET_NAME="ospubnet"
-XEN_INT_BRIDGE_OR_NET_NAME="osintnet"
 
 # Do not use secure delete
 CINDER_SECURE_DELETE=False
@@ -457,15 +458,13 @@ CINDER_SECURE_DELETE=False
 VIRT_DRIVER=xenserver
 
 # OpenStack VM settings
-OSDOMU_VDI_GB=30
-OSDOMU_MEM_MB=8192
-
 TERMINATE_TIMEOUT=90
 BUILD_TIMEOUT=600
 
 # DevStack settings
-LOGFILE=${SCREEN_LOGDIR}/stack.log
-SCREEN_LOGDIR=${SCREEN_LOGDIR}
+
+LOGDIR=${LOGDIR}
+LOGFILE=${LOGDIR}/stack.log
 
 UBUNTU_INST_HTTP_HOSTNAME=archive.ubuntu.com
 UBUNTU_INST_HTTP_DIRECTORY=/ubuntu
@@ -487,7 +486,6 @@ ENABLE_TENANT_VLANS=True
 Q_ML2_TENANT_NETWORK_TYPE=vlan
 ML2_VLAN_RANGES="physnet1:1100:1200"
 
-PUB_IP=172.24.4.1
 SUBNETPOOL_PREFIX_V4=192.168.10.0/24
 NETWORK_GATEWAY=192.168.10.1
 
@@ -500,43 +498,31 @@ PUBLIC_INTERFACE=eth2
 [DEFAULT]
 disk_allocation_ratio = 2.0
 
-# Neutron ovs bridge mapping
-[[post-config|\\\$NEUTRON_CORE_PLUGIN_CONF]]
-[ovs]
-bridge_mappings = physnet1:br-eth1,public:br-ex
-
 LOCALCONF_CONTENT_ENDS_HERE
 
-# unset nounset for $NOVA_CONF
-set -u
+# begin installation process
+cd $DOM0_TOOL_DIR
+./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
 
-# XenServer doesn't have nproc by default - but it's used by stackrc.
-# Fake it up if one doesn't exist
-set +e
-which nproc > /dev/null 2>&1
-if [ \$? -ne 0 ]; then
-  cat >> /usr/local/bin/nproc << END_OF_NPROC
-#!/bin/bash
-cat /proc/cpuinfo | grep -c processor
-END_OF_NPROC
-  chmod +x /usr/local/bin/nproc
-fi
-
-cd tools/xen
-EXIT_AFTER_JEOS_INSTALLATION="$EXIT_AFTER_JEOS_INSTALLATION" ./install_os_domU.sh
 END_OF_XENSERVER_COMMANDS
+
+on_xenserver << END_OF_RM_TMPDIR
+
+#delete install dir
+rm $TMPDIR -rf
+END_OF_RM_TMPDIR
 
 if [ "$TEST_TYPE" == "none" ]; then
     exit 0
 fi
 
 # Run tests
+DOM0_FUNCTION_DIR="$DOM0_OS_API_DIR/install/common"
 copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
-set -exu
-cd $TMPDIR
-cd devstack*
 
-GUEST_IP=\$(. "tools/xen/functions" && find_ip_by_name DevStackOSDomU 0)
+set -exu
+
+GUEST_IP=\$(. $DOM0_FUNCTION_DIR/functions && find_ip_by_name $DEV_STACK_DOMU_NAME 0)
 ssh -q \
     -o Batchmode=yes \
     -o StrictHostKeyChecking=no \

@@ -46,7 +46,7 @@ fi
 # Clone built-in template to create new template
 new_uuid=$(xe vm-clone uuid=$builtin_uuid \
     new-name-label="$UBUNTU_INST_TEMPLATE_NAME")
-disk_size=$(($CLEAN_VM_VDI_GB * 1024 * 1024 * 1024))
+disk_size=$(($VM_VDI_GB * 1024 * 1024 * 1024))
 
 # Some of these settings can be found in example preseed files
 # however these need to be answered before the netinstall
