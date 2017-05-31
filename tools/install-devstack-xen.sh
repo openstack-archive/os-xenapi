@@ -448,6 +448,7 @@ DOM0_OPT_DIR=$TMPDIR/domU
 DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
 DOM0_OS_API_DIR="$DOM0_OS_API_UNZIP_DIR/os-xenapi-*"
 DOM0_INSTALL_DIR="$DOM0_OS_API_DIR/install"
+DOM0_TOOL_DIR="$DOM0_OS_API_DIR/tools"
 copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
     mkdir $DOM0_OPT_DIR
     cd $DOM0_OPT_DIR
@@ -455,9 +456,10 @@ copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
     unzip -o master.zip -d $DOM0_OS_API_UNZIP_DIR
     if [ ! -f "$DOM0_INSTALL_DIR/install_on_xen_host.sh" ]; then
         cp -rf /tmp/install $DOM0_OS_API_DIR
+        cp -f /tmp/install_on_xen_host.sh $DOM0_OS_API_DIR/tools
     fi
-    cd $DOM0_INSTALL_DIR
 
+    cd $DOM0_INSTALL_DIR
 cat << LOCALCONF_CONTENT_ENDS_HERE > local.conf
 # ``local.conf`` is a user-maintained settings file that is sourced from ``stackrc``.
 # This gives it the ability to override any variables set in ``stackrc``.
@@ -532,7 +534,8 @@ disk_allocation_ratio = 2.0
 LOCALCONF_CONTENT_ENDS_HERE
 
 # begin installation process
-./install_on_xen_host.sh $XENSERVER_PASS -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
+cd $DOM0_TOOL_DIR
+./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
 
 END_OF_XENSERVER_COMMANDS
 
