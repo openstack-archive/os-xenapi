@@ -351,12 +351,12 @@ function install_conntrack_tools {
 # Wait for VM to halt
 #
 function wait_for_VM_to_halt {
-    mgmt_ip="$1"
-    GUEST_VM_NAME="$2"
+    #mgmt_ip="$1"
+    GUEST_VM_NAME="$1"
     set +x
     echo "Waiting for the VM to halt.  Progress in-VM can be checked with XenCenter or xl console:"
     domid=$(get_domid "$GUEST_VM_NAME")
-    echo "ssh root@$mgmt_ip \"xl console $domid\""
+    echo "ssh root@host \"xl console $domid\""
     while true; do
         state=$(xe_min vm-list name-label="$GUEST_VM_NAME" power-state=halted)
         if [ -n "$state" ]; then

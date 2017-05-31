@@ -12,8 +12,7 @@ set -o xtrace
 
 export LC_ALL=C
 
-XENAPI_CONNECTION_IP="$1"
-# This directory
+# directory settings
 THIS_DIR=$(cd $(dirname "$0") && pwd)
 SCRIPT_DIR="$THIS_DIR/scripts"
 COMM_DIR="$THIS_DIR/common"
@@ -179,7 +178,7 @@ if [ -z "$templateuuid" ]; then
     xe vm-start vm="$GUEST_NAME"
 
     # wait for install to finish
-    wait_for_VM_to_halt "$XENAPI_CONNECTION_IP" "$GUEST_NAME"
+    wait_for_VM_to_halt "$GUEST_NAME"
 
     # set VM to restart after a reboot
     vm_uuid=$(xe_min vm-list name-label="$GUEST_NAME")
