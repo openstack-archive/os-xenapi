@@ -10,8 +10,8 @@ GUEST_NAME=${GUEST_NAME:-CleanUbuntuVM}
 
 # Template cleanup
 CLEAN_TEMPLATES=${CLEAN_TEMPLATES:-false}
-TNAME="jeos_template_for_unbuntu"
-SNAME_TEMPLATE="jeos_snapshot_for_unbuntu"
+TNAME="jeos_template_for_ubuntu"
+SNAME_TEMPLATE="jeos_snapshot_for_ubuntu"
 
 # Devstack now contains many components.  4GB ram is not enough to prevent
 # swapping and memory fragmentation - the latter of which can cause failures

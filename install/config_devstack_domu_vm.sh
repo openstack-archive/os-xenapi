@@ -112,7 +112,7 @@ add_interface "$DEV_STACK_DOMU_NAME" "$MGT_BRIDGE_OR_NET_NAME" "0"
 xe vm-start vm="$DEV_STACK_DOMU_NAME"
 
 # Wait for prep script to finish and shutdown system
-wait_for_VM_to_halt "$XENAPI_CONNECTION_IP" "$DEV_STACK_DOMU_NAME"
+wait_for_VM_to_halt "$DEV_STACK_DOMU_NAME"
 
 ## Setup network cards
 # Wipe out all
