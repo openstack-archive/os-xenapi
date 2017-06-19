@@ -16,50 +16,8 @@ function die_with_error {
     exit 1
 }
 
-function xapi_plugin_location {
-    for PLUGIN_DIR in "/etc/xapi.d/plugins/" "/usr/lib/xcp/plugins/" "/usr/lib/xapi/plugins" "/usr/lib64/xapi/plugins"; do
-        if [ -d $PLUGIN_DIR ]; then
-            echo $PLUGIN_DIR
-            return 0
-        fi
-    done
-    return 1
-}
-
-function create_directory_for_kernels {
-    if [ -d "/boot/guest" ]; then
-        echo "INFO: /boot/guest directory already exists, using that" >&2
-    else
-        local local_path
-        local_path="$(get_local_sr_path)/os-guest-kernels"
-        mkdir -p $local_path
-        ln -s $local_path /boot/guest
-    fi
-}
-
-function create_directory_for_images {
-    if [ -d "/images" ]; then
-        echo "INFO: /images directory already exists, using that" >&2
-    else
-        local local_path
-        local_path="$(get_local_sr_path)/os-images"
-        mkdir -p $local_path
-        ln -s $local_path /images
-    fi
-}
-
 function get_local_sr {
     xe pool-list params=default-SR minimal=true
-}
-
-function get_local_sr_path {
-    pbd_path="/var/run/sr-mount/$(get_local_sr)"
-    pbd_device_config_path=`xe pbd-list sr-uuid=$(get_local_sr) params=device-config | grep " path: "`
-    if [ -n "$pbd_device_config_path" ]; then
-        pbd_uuid=`xe pbd-list sr-uuid=$(get_local_sr) minimal=true`
-        pbd_path=`xe pbd-param-get uuid=$pbd_uuid param-name=device-config param-key=path || echo ""`
-    fi
-    echo $pbd_path
 }
 
 function find_ip_by_name {
@@ -272,6 +230,25 @@ function set_vm_memory {
         dynamic-max=${memory}MiB \
         uuid=$vm
 }
+
+function set_vm_disk {
+    local vm_name_label
+    local vm_disk_size
+
+    vm_name_label="$1"
+    vm_disk_size="$2"
+
+    local vm_uuid
+    local vm_vbd
+    local vm_vdi
+
+    vm_uuid=$(xe vm-list name-label=$vm_name_label --minimal)
+    vm_vbd=$(xe vbd-list vm-uuid=$vm_uuid device=xvda --minimal)
+    vm_vdi=$(xe vdi-list vbd-uuids=$vm_vbd --minimal)
+
+    xe vdi-resize uuid=$vm_vdi disk-size=$((vm_disk_size * 1024 * 1024 * 1024))
+}
+
 
 function max_vcpus {
     local vm_name_label
