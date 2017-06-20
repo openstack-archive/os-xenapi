@@ -26,7 +26,7 @@ optional arguments:
                        file location.
  -l LOG_FILE_DIRECTORY The directory in which to store the devstack logs on failure.
  -j JEOS_URL           An URL for an xva containing an exported minimal OS template
-                       with the name jeos_template_for_devstack, to be used
+                       with the name jeos_template_for_ubuntu, to be used
                        as a starting point.
  -e JEOS_FILENAME      Save a JeOS xva to the given filename and quit. If this
                        parameter is specified, no private key setup or devstack
@@ -160,7 +160,6 @@ fi
 
 # Set up internal variables
 _SSH_OPTIONS="\
-    -q \
     -o BatchMode=yes \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null"
@@ -201,32 +200,32 @@ function assert_tool_exists() {
     fi
 }
 
+if [ "$PRIVKEY" != "-" ]; then
+    echo "Setup ssh keys on XenServer..."
+    tmp_dir="$(mktemp -d --suffix=OpenStack)"
+    echo "Use $tmp_dir for public/private keys..."
+    cp $PRIVKEY "$tmp_dir/devstack"
+    ssh-keygen -y -f $PRIVKEY > "$tmp_dir/devstack.pub"
+    assert_tool_exists sshpass
+    echo "Setup public key to XenServer..."
+    DEVSTACK_PUB=$(cat $tmp_dir/devstack.pub)
+    sshpass -p "$XENSERVER_PASS" \
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        root@$XENSERVER "echo $DEVSTACK_PUB >> ~/.ssh/authorized_keys"
+    scp $_SSH_OPTIONS $PRIVKEY "root@$XENSERVER:.ssh/id_rsa"
+    scp $_SSH_OPTIONS $tmp_dir/devstack.pub "root@$XENSERVER:.ssh/id_rsa.pub"
+    rm -rf "$tmp_dir"
+    unset tmp_dir
+    echo "OK"
+fi
+
 DEFAULT_SR_ID=$(on_xenserver <<EOF
 xe pool-list params=default-SR minimal=true
 EOF
 )
 TMP_TEMPLATE_DIR=/var/run/sr-mount/$DEFAULT_SR_ID/devstack_template
 
-if [ -z "$JEOS_FILENAME" ]; then
-    if [ "$PRIVKEY" != "-" ]; then
-      echo "Setup ssh keys on XenServer..."
-      tmp_dir="$(mktemp -d --suffix=OpenStack)"
-      echo "Use $tmp_dir for public/private keys..."
-      cp $PRIVKEY "$tmp_dir/devstack"
-      ssh-keygen -y -f $PRIVKEY > "$tmp_dir/devstack.pub"
-      assert_tool_exists sshpass
-      echo "Setup public key to XenServer..."
-      DEVSTACK_PUB=$(cat $tmp_dir/devstack.pub)
-      sshpass -p "$XENSERVER_PASS" \
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            root@$XENSERVER "echo $DEVSTACK_PUB >> ~/.ssh/authorized_keys"
-      scp $_SSH_OPTIONS $PRIVKEY "root@$XENSERVER:.ssh/id_rsa"
-      scp $_SSH_OPTIONS $tmp_dir/devstack.pub "root@$XENSERVER:.ssh/id_rsa.pub"
-      rm -rf "$tmp_dir"
-      unset tmp_dir
-      echo "OK"
-    fi
-else
+if [ ! -z "$JEOS_FILENAME" ]; then
     echo -n "Exporting JeOS template..."
     echo "template will save to $TMP_TEMPLATE_DIR"
 
@@ -235,10 +234,10 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
+JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_ubuntu" --minimal)"
 
 if [ -z "\$JEOS_TEMPLATE" ]; then
-    echo "FATAL: jeos_template_for_devstack not found"
+    echo "FATAL: jeos_template_for_ubuntu not found"
     exit 1
 fi
 rm -rf $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
@@ -347,10 +346,10 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
+JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_ubuntu" --minimal)"
 
 if [ -n "\$JEOS_TEMPLATE" ]; then
-    echo "  jeos_template_for_devstack already exist, uninstalling"
+    echo "  jeos_template_for_ubuntu already exist, uninstalling"
     xe template-uninstall template-uuid="\$JEOS_TEMPLATE" force=true > /dev/null
 fi
 
@@ -361,9 +360,9 @@ echo "  importing $TMP_TEMPLATE_DIR/jeos-for-devstack.xva"
 xe vm-import filename=$TMP_TEMPLATE_DIR/jeos-for-devstack.xva
 rm -rf $TMP_TEMPLATE_DIR
 echo "  verify template imported"
-JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_devstack" --minimal)"
+JEOS_TEMPLATE="\$(xe template-list name-label="jeos_template_for_ubuntu" --minimal)"
 if [ -z "\$JEOS_TEMPLATE" ]; then
-    echo "FATAL: template jeos_template_for_devstack does not exist after import."
+    echo "FATAL: template jeos_template_for_ubuntu does not exist after import."
     exit 1
 fi
 
