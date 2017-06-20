@@ -160,7 +160,6 @@ fi
 
 # Set up internal variables
 _SSH_OPTIONS="\
-    -q \
     -o BatchMode=yes \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null"
@@ -201,32 +200,32 @@ function assert_tool_exists() {
     fi
 }
 
+if [ "$PRIVKEY" != "-" ]; then
+    echo "Setup ssh keys on XenServer..."
+    tmp_dir="$(mktemp -d --suffix=OpenStack)"
+    echo "Use $tmp_dir for public/private keys..."
+    cp $PRIVKEY "$tmp_dir/devstack"
+    ssh-keygen -y -f $PRIVKEY > "$tmp_dir/devstack.pub"
+    assert_tool_exists sshpass
+    echo "Setup public key to XenServer..."
+    DEVSTACK_PUB=$(cat $tmp_dir/devstack.pub)
+    sshpass -p "$XENSERVER_PASS" \
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        root@$XENSERVER "echo $DEVSTACK_PUB >> ~/.ssh/authorized_keys"
+    scp $_SSH_OPTIONS $PRIVKEY "root@$XENSERVER:.ssh/id_rsa"
+    scp $_SSH_OPTIONS $tmp_dir/devstack.pub "root@$XENSERVER:.ssh/id_rsa.pub"
+    rm -rf "$tmp_dir"
+    unset tmp_dir
+    echo "OK"
+fi
+
 DEFAULT_SR_ID=$(on_xenserver <<EOF
 xe pool-list params=default-SR minimal=true
 EOF
 )
 TMP_TEMPLATE_DIR=/var/run/sr-mount/$DEFAULT_SR_ID/devstack_template
 
-if [ -z "$JEOS_FILENAME" ]; then
-    if [ "$PRIVKEY" != "-" ]; then
-      echo "Setup ssh keys on XenServer..."
-      tmp_dir="$(mktemp -d --suffix=OpenStack)"
-      echo "Use $tmp_dir for public/private keys..."
-      cp $PRIVKEY "$tmp_dir/devstack"
-      ssh-keygen -y -f $PRIVKEY > "$tmp_dir/devstack.pub"
-      assert_tool_exists sshpass
-      echo "Setup public key to XenServer..."
-      DEVSTACK_PUB=$(cat $tmp_dir/devstack.pub)
-      sshpass -p "$XENSERVER_PASS" \
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            root@$XENSERVER "echo $DEVSTACK_PUB >> ~/.ssh/authorized_keys"
-      scp $_SSH_OPTIONS $PRIVKEY "root@$XENSERVER:.ssh/id_rsa"
-      scp $_SSH_OPTIONS $tmp_dir/devstack.pub "root@$XENSERVER:.ssh/id_rsa.pub"
-      rm -rf "$tmp_dir"
-      unset tmp_dir
-      echo "OK"
-    fi
-else
+if [ ! -z "$JEOS_FILENAME" ]; then
     echo -n "Exporting JeOS template..."
     echo "template will save to $TMP_TEMPLATE_DIR"
 
