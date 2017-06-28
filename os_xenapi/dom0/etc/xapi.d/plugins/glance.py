@@ -42,7 +42,7 @@ from urlparse import urlparse
 
 import dom0_pluginlib
 import utils
-
+import XenAPI
 
 dom0_pluginlib.configure_logging('glance')
 logging = dom0_pluginlib.logging
@@ -430,7 +430,6 @@ def check_resp_status_and_retry(resp, image_id, url):
                        httplib.UNAUTHORIZED,                     # 401
                        httplib.PAYMENT_REQUIRED,                 # 402
                        httplib.FORBIDDEN,                        # 403
-                       httplib.NOT_FOUND,                        # 404
                        httplib.METHOD_NOT_ALLOWED,               # 405
                        httplib.NOT_ACCEPTABLE,                   # 406
                        httplib.PROXY_AUTHENTICATION_REQUIRED,    # 407
@@ -454,6 +453,10 @@ def check_resp_status_and_retry(resp, image_id, url):
         raise PluginError("Got Permanent Error response [%i] while "
                           "uploading image [%s] to glance [%s]"
                           % (resp.status, image_id, url))
+    # Nove service would process the exception
+    elif resp.status == httplib.NOT_FOUND:                        # 404
+        exc = XenAPI.Failure('ImageNotFound')
+        raise exc
     # NOTE(nikhil): Only a sub-set of the 500 errors are retryable. We
     # optimistically retry on 500 errors below.
     elif resp.status in (httplib.REQUEST_TIMEOUT,                # 408
