@@ -33,6 +33,10 @@ import json
 from os_xenapi.tests.plugins import plugin_test
 
 
+class FakeXenAPIException(Exception):
+    pass
+
+
 class Fake_HTTP_Request_Error(Exception):
     pass
 
@@ -460,6 +464,17 @@ class GlanceTestCase(plugin_test.PluginTestBase):
 
         self.assertRaises(
             self.glance.RetryableError,
+            self.glance.check_resp_status_and_retry,
+            mock_resp_badgateway,
+            'fake_image_id',
+            'fake_url')
+
+    def test_check_resp_status_and_retry_image_not_found(self):
+        mock_resp_badgateway = mock.Mock()
+        mock_resp_badgateway.status = httplib.NOT_FOUND
+        self.glance.XenAPI.Failure = FakeXenAPIException
+        self.assertRaises(
+            self.glance.XenAPI.Failure,
             self.glance.check_resp_status_and_retry,
             mock_resp_badgateway,
             'fake_image_id',
