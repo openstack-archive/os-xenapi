@@ -457,6 +457,7 @@ def check_resp_status_and_retry(resp, image_id, url):
     elif resp.status == httplib.NOT_FOUND:                        # 404
         exc = XenAPI.Failure('ImageNotFound')
         raise exc
+
     # NOTE(nikhil): Only a sub-set of the 500 errors are retryable. We
     # optimistically retry on 500 errors below.
     elif resp.status in (httplib.REQUEST_TIMEOUT,                # 408
