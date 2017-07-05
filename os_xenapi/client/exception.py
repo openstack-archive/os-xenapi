@@ -51,5 +51,9 @@ class PluginRetriesExceeded(OsXenApiException):
     msg_fmt = _("Number of retries to plugin (%(num_retries)d) exceeded.")
 
 
+class PluginImageNotFound(OsXenApiException):
+    msg_fmt = _("Image (%(image_id)s) not found.")
+
+
 class SessionLoginTimeout(OsXenApiException):
     msg_fmt = _("Unable to log in to XenAPI (is the Dom0 disk full?)")
