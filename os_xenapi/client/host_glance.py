@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from os_xenapi.client import exception
+from os_xenapi.client import XenAPI
+
 
 def download_vhd(session, num_retries, callback, retry_cb, image_id, sr_path,
                  extra_headers, uuid_stack=''):
@@ -26,5 +29,13 @@ def upload_vhd(session, num_retries, callback, retry_cb, image_id, sr_path,
     args = {'image_id': image_id, 'sr_path': sr_path,
             'extra_headers': extra_headers, 'vdi_uuids': vdi_uuids,
             'properties': properties}
-    return session.call_plugin_serialized_with_retry(
-        'glance.py', 'upload_vhd2', num_retries, callback, retry_cb, **args)
+    try:
+        session.call_plugin_serialized_with_retry(
+            'glance.py', 'upload_vhd2', num_retries, callback, retry_cb, **args
+        )
+    except XenAPI.Failure as exc:
+        details = exc.details
+        if (len(exc.details) == 4 and details[3] == 'ImageNotFound'):
+            raise exception.PluginImageNotFound(image_id=image_id)
+        else:
+            raise
