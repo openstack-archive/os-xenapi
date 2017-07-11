@@ -321,7 +321,7 @@ def _update_image_meta_v2(conn, image_id, extra_headers, properties):
                 "op": "add"}
         body.append(prop)
     body = json.dumps(body)
-    conn.request('PATCH', '/v2/images/%s' % image_id,
+    conn.request('PATCH', '/image/v2/images/%s' % image_id,
                  body=body, headers=headers)
     resp = conn.getresponse()
     resp.read()
@@ -549,7 +549,7 @@ def validate_image_status_before_upload_v2(conn, url, extra_headers):
         # unnecessarily buffered by Glance. This wastes time and bandwidth.
         # LP bug #1202785
 
-        conn.request('GET', '/v2/images/%s' % image_id, headers=extra_headers)
+        conn.request('GET', '/image/v2/images/%s' % image_id, headers=extra_headers)
         get_resp = conn.getresponse()
     except Exception, error:  # noqa
         logging.exception('Failed to GET the image %(image_id)s while '
