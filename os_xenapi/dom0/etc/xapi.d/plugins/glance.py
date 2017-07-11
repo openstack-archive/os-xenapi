@@ -297,7 +297,8 @@ def _upload_tarball_by_url_v1(staging_path, image_id, glance_endpoint,
         conn.close()
 
 
-def _update_image_meta_v2(conn, image_id, extra_headers, properties):
+def _update_image_meta_v2(conn, image_id, extra_headers, properties,
+                          wsgi_path):
     # NOTE(sirp): There is some confusion around OVF. Here's a summary
     # of where we currently stand:
     #   1. OVF as a container format is misnamed. We really should be
@@ -321,8 +322,8 @@ def _update_image_meta_v2(conn, image_id, extra_headers, properties):
                 "op": "add"}
         body.append(prop)
     body = json.dumps(body)
-    conn.request('PATCH', '/v2/images/%s' % image_id,
-                 body=body, headers=headers)
+
+    conn.request('PATCH', wsgi_path, body=body, headers=headers)
     resp = conn.getresponse()
     resp.read()
 
@@ -364,9 +365,16 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
         raise RetryableError(error)
 
     try:
-        _update_image_meta_v2(conn, image_id, extra_headers, properties)
+        if url.count(':') > 1:
+            wsgi_path = '/v2/images/%s' % image_id
+        else:
+            wsgi_path = '/image/v2/images/%s' % image_id
 
-        validate_image_status_before_upload_v2(conn, url, extra_headers)
+        _update_image_meta_v2(conn, image_id, extra_headers, properties,
+                              wsgi_path)
+
+        validate_image_status_before_upload_v2(conn, url, extra_headers,
+                                               wsgi_path)
 
         try:
             conn.connect()
@@ -537,7 +545,8 @@ def validate_image_status_before_upload_v1(conn, url, extra_headers):
                                       'image_status': image_status})
 
 
-def validate_image_status_before_upload_v2(conn, url, extra_headers):
+def validate_image_status_before_upload_v2(conn, url, extra_headers,
+                                           wsgi_path):
     try:
         parts = urlparse(url)
         path = parts[2]
@@ -548,8 +557,7 @@ def validate_image_status_before_upload_v2(conn, url, extra_headers):
         # it is not 'active' and send back a 409. Hence, the data will be
         # unnecessarily buffered by Glance. This wastes time and bandwidth.
         # LP bug #1202785
-
-        conn.request('GET', '/v2/images/%s' % image_id, headers=extra_headers)
+        conn.request('GET', wsgi_path, headers=extra_headers)
         get_resp = conn.getresponse()
     except Exception, error:  # noqa
         logging.exception('Failed to GET the image %(image_id)s while '
