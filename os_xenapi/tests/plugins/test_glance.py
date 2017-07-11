@@ -420,8 +420,9 @@ class GlanceTestCase(plugin_test.PluginTestBase):
             mock_HTTPSConn.return_value.getresponse.called)
         self.assertTrue(mock_check_resp_status.called)
 
-    def test_update_image_meta_ok_v2(self):
+    def test_update_image_meta_ok_v2_using_api_service(self):
         fake_conn = mock.Mock()
+        fake_url = "https://0.0.0.0:0"
         fake_extra_headers = {'fake_type': 'fake_content'}
         fake_properties = {'fake_path': True}
         new_fake_properties = {'path': '/fake-path',
@@ -439,10 +440,39 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_conn.getresponse.return_value = mock.Mock()
         fake_conn.getresponse().status = httplib.OK
 
-        self.glance._update_image_meta_v2(fake_conn, 'fake_image_id',
+        self.glance._update_image_meta_v2(fake_conn, fake_url, 'fake_image_id',
                                           fake_extra_headers, fake_properties)
         fake_conn.request.assert_called_with('PATCH',
                                              '/v2/images/%s' % 'fake_image_id',
+                                             body=fake_body_json,
+                                             headers=fake_headers)
+        fake_conn.getresponse.assert_called()
+
+    def test_update_image_meta_ok_v2_using_uwsgi_service(self):
+        fake_conn = mock.Mock()
+        fake_url = "https://0.0.0.0"
+        fake_extra_headers = {'fake_type': 'fake_content'}
+        fake_properties = {'fake_path': True}
+        new_fake_properties = {'path': '/fake-path',
+                               'value': "True",
+                               'op': 'add'}
+        fake_body = [
+            {"path": "/container_format", "value": "ovf", "op": "add"},
+            {"path": "/disk_format", "value": "vhd", "op": "add"},
+            {"path": "/visibility", "value": "private", "op": "add"}]
+        fake_body.append(new_fake_properties)
+        fake_body_json = json.dumps(fake_body)
+        fake_headers = {
+            'Content-Type': 'application/openstack-images-v2.1-json-patch'}
+        fake_headers.update(**fake_extra_headers)
+        fake_conn.getresponse.return_value = mock.Mock()
+        fake_conn.getresponse().status = httplib.OK
+
+        self.glance._update_image_meta_v2(fake_conn, fake_url, 'fake_image_id',
+                                          fake_extra_headers, fake_properties)
+        fake_conn.request.assert_called_with('PATCH',
+                                             '/image/v2/images/%s' %
+                                             'fake_image_id',
                                              body=fake_body_json,
                                              headers=fake_headers)
         fake_conn.getresponse.assert_called()
@@ -579,7 +609,33 @@ class GlanceTestCase(plugin_test.PluginTestBase):
             mock_head_resp, fake_image_id, fake_url)
         mock_conn.request.assert_called_once()
 
-    def test_validate_image_status_before_upload_ok_v2(self):
+    def test_validate_image_status_before_upload_ok_v2_using_api_service(self):
+        mock_conn = mock.Mock()
+        fake_url = 'http://fake_host:fake_port/fake_path/fake_image_id'
+        mock_check_resp_status_and_retry = self.mock_patch_object(
+            self.glance, 'check_resp_status_and_retry')
+        mock_head_resp = mock.Mock()
+        mock_head_resp.status = httplib.OK
+        mock_head_resp.read.return_value = '{"status": "queued"}'
+        mock_conn.getresponse.return_value = mock_head_resp
+        parts = urlparse(fake_url)
+        fake_path = parts[2]
+        fake_image_id = fake_path.split('/')[-2]
+        fake_extra_headers = mock.Mock()
+
+        self.glance.validate_image_status_before_upload_v2(
+            mock_conn, fake_url, extra_headers=fake_extra_headers)
+
+        self.assertTrue(mock_conn.getresponse.called)
+        self.assertEqual(
+            mock_head_resp.read.call_count, 2)
+        self.assertFalse(mock_check_resp_status_and_retry.called)
+        mock_conn.request.assert_called_with('GET',
+                                             '/v2/images/%s' %
+                                             fake_image_id,
+                                             headers=fake_extra_headers)
+
+    def test_validate_image_status_before_upload_ok_v2_using_uwsgi(self):
         mock_conn = mock.Mock()
         fake_url = 'http://fake_host/fake_path/fake_image_id'
         mock_check_resp_status_and_retry = self.mock_patch_object(
@@ -589,14 +645,22 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_head_resp.read.return_value = '{"status": "queued"}'
         mock_conn.getresponse.return_value = mock_head_resp
 
+        parts = urlparse(fake_url)
+        fake_path = parts[2]
+        fake_image_id = fake_path.split('/')[-2]
+        fake_extra_headers = mock.Mock()
+
         self.glance.validate_image_status_before_upload_v2(
-            mock_conn, fake_url, extra_headers=mock.Mock())
+            mock_conn, fake_url, extra_headers=fake_extra_headers)
 
         self.assertTrue(mock_conn.getresponse.called)
         self.assertEqual(
             mock_head_resp.read.call_count, 2)
         self.assertFalse(mock_check_resp_status_and_retry.called)
-        mock_conn.request.assert_called_once()
+        mock_conn.request.assert_called_with('GET',
+                                             '/image/v2/images/%s' %
+                                             fake_image_id,
+                                             headers=fake_extra_headers)
 
     def test_validate_image_status_before_upload_get_image_failed_v2(self):
         mock_conn = mock.Mock()
