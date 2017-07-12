@@ -358,7 +358,7 @@ class XenAPISession(object):
     def is_xsm_sr_check_relaxed(self):
         if self._cached_xsm_sr_relaxed is None:
             config_value = self.call_plugin('config_file', 'get_val',
-                                            key='relax-xsm-sr-check')
+                                            dict(key='relax-xsm-sr-check'))
             if not config_value:
                 version_str = '.'.join(str(v) for v in self.platform_version)
                 if versionutils.is_compatible('2.1.0', version_str,
