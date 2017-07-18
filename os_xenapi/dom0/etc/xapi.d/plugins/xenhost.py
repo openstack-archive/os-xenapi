@@ -32,7 +32,6 @@ except ImportError:
     import simplejson as json
 import logging
 import re
-import six
 import sys
 import time
 
@@ -376,7 +375,7 @@ ALLOWED_NETWORK_CMDS = {
 def network_config(session, args):
     """network config functions"""
     cmd = pluginlib.exists(args, 'cmd')
-    if not isinstance(cmd, six.string_types):
+    if not isinstance(cmd, basestring):
         msg = "invalid command '%s'" % str(cmd)
         raise pluginlib.PluginError(msg)
         return
