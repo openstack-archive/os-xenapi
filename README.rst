@@ -8,7 +8,6 @@ This library provides the support functions needed to connect to and manage a Xe
 hypervisor, such as Citrix's XenServer.
 
 * Free software: Apache license
-* Documentation: http://docs.openstack.org/developer/os-xenapi
 * Source: http://git.openstack.org/cgit/openstack/os-xenapi
 * Bugs: http://bugs.launchpad.net/os-xenapi
 
