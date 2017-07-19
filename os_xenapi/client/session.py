@@ -130,7 +130,7 @@ class XenAPISession(object):
 
     def swap_xapi_host(self, url, host_addr):
         """Replace the XenServer address present in 'url' with 'host_addr'."""
-        temp_url = urllib.parse.urlparse.urlparse(url)
+        temp_url = urllib.parse.urlparse(url)
         return url.replace(temp_url.hostname, '%s' % host_addr)
 
     def _populate_session_pool(self, url, user, pw):
