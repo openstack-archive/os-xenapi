@@ -29,7 +29,12 @@ class SessionTestCase(base.TestCase):
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
-    def test_session_nova_originator(self, mock_version_and_brand,
+    @mock.patch.object(session.XenAPISession, '_get_host_ref_by_ip')
+    @mock.patch.object(session.XenAPISession, '_get_host_uuid_by_ip')
+    def test_session_nova_originator(self,
+                                     mock_get_host_uuid_by_ip,
+                                     mock_get_host_ref_by_ip,
+                                     mock_version_and_brand,
                                      mock_create_session,
                                      mock_platform_version,
                                      mock_verify_plugin_version):
@@ -37,17 +42,120 @@ class SessionTestCase(base.TestCase):
         originator = 'os-xenapi-nova'
         version = '2.1'
         timeout = 10
+        fake_url = 'http://00.00.00.00'
         sess = mock.Mock()
         mock_create_session.return_value = sess
         mock_version_and_brand.return_value = ('6.5', 'XenServer')
         mock_platform_version.return_value = (2, 1, 0)
 
-        session.XenAPISession('http://someserver', 'username', 'password',
-                              originator=originator, concurrent=concurrent,
-                              timeout=timeout)
+        xenapi_sess = session.XenAPISession(fake_url, 'username',
+                                            'password', originator=originator,
+                                            concurrent=concurrent,
+                                            timeout=timeout)
 
         sess.login_with_password.assert_called_with('username', 'password',
                                                     version, originator)
+        mock_get_host_ref_by_ip.assert_not_called()
+        mock_get_host_uuid_by_ip.assert_not_called()
+        self.assertFalse(xenapi_sess.is_slave)
+
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_get_platform_version')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
+    @mock.patch.object(session.XenAPISession, '_create_session_and_login')
+    @mock.patch.object(session.XenAPISession, '_get_host_ref_by_ip')
+    @mock.patch.object(session.XenAPISession, '_get_host_uuid_by_ip')
+    @mock.patch.object(socket, 'gethostbyname')
+    def test_session_on_slave_node_using_host_ip(self,
+                                                 mock_gethostbyname,
+                                                 mock_get_host_uuid_by_ip,
+                                                 mock_get_host_ref_by_ip,
+                                                 mock_login,
+                                                 mock_version_and_brand,
+                                                 mock_create_session,
+                                                 mock_platform_version,
+                                                 mock_verify_plugin_version):
+        sess = mock.Mock()
+        fake_records = {'fake_host_ref': {'uuid': 'fake_host_uuid'}}
+        sess.xenapi.host.get_all_records_where.return_value = fake_records
+        side_effects = [XenAPI.Failure(['HOST_IS_SLAVE', 'fake_master_url']),
+                        sess, sess, sess]
+        mock_login.side_effect = side_effects
+        concurrent = 2
+        originator = 'os-xenapi-nova'
+        version = '2.1'
+        timeout = 10
+        mock_version_and_brand.return_value = ('6.5', 'XenServer')
+        mock_platform_version.return_value = (2, 1, 0)
+        fake_url = 'http://00.00.00.00'
+        fake_ip = '00.00.00.00'
+        fake_ip = fake_url[fake_url.rfind('/') + 1:]
+        mock_get_host_ref_by_ip.return_value = 'fake_host_ref'
+        mock_get_host_uuid_by_ip.return_value = 'fake_host_uuid'
+
+        xenapi_sess = session.XenAPISession(fake_url, 'username',
+                                            'password', originator=originator,
+                                            concurrent=concurrent,
+                                            timeout=timeout)
+
+        self.assertTrue(xenapi_sess.is_slave)
+        mock_get_host_ref_by_ip.assert_called_with(sess, fake_ip)
+        mock_get_host_uuid_by_ip.assert_called_with(sess, fake_ip)
+        mock_gethostbyname.assert_not_called()
+        self.assertEqual('fake_host_ref', xenapi_sess.host_ref)
+        self.assertEqual('fake_host_uuid', xenapi_sess.host_uuid)
+        self.assertEqual('http://fake_master_url', xenapi_sess.url)
+
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_get_platform_version')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
+    @mock.patch.object(session.XenAPISession, '_create_session_and_login')
+    @mock.patch.object(session.XenAPISession, '_get_host_ref_by_ip')
+    @mock.patch.object(session.XenAPISession, '_get_host_uuid_by_ip')
+    @mock.patch.object(socket, 'gethostbyname')
+    def test_session_on_slave_node_using_host_name(self,
+                                                   mock_gethostbyname,
+                                                   mock_get_host_uuid_by_ip,
+                                                   mock_get_host_ref_by_ip,
+                                                   mock_login,
+                                                   mock_version_and_brand,
+                                                   mock_create_session,
+                                                   mock_platform_version,
+                                                   mock_verify_plugin_version):
+        sess = mock.Mock()
+        fake_records = {'fake_host_ref': {'uuid': 'fake_host_uuid'}}
+        sess.xenapi.host.get_all_records_where.return_value = fake_records
+        side_effects = [XenAPI.Failure(['HOST_IS_SLAVE', 'fake_master_url']),
+                        sess, sess, sess]
+        mock_login.side_effect = side_effects
+        concurrent = 2
+        originator = 'os-xenapi-nova'
+        version = '2.1'
+        timeout = 10
+        mock_version_and_brand.return_value = ('6.5', 'XenServer')
+        mock_platform_version.return_value = (2, 1, 0)
+        fake_url = 'http://someserver'
+        fake_host_name = 'someserver'
+        fake_ip = '00.00.00.00'
+        fake_ip = fake_url[fake_url.rfind('/') + 1:]
+        mock_get_host_ref_by_ip.return_value = 'fake_host_ref'
+        mock_get_host_uuid_by_ip.return_value = 'fake_host_uuid'
+        mock_gethostbyname.return_value = fake_ip
+        xenapi_sess = session.XenAPISession(fake_url, 'username',
+                                            'password', originator=originator,
+                                            concurrent=concurrent,
+                                            timeout=timeout)
+
+        self.assertTrue(xenapi_sess.is_slave)
+        mock_get_host_ref_by_ip.assert_called_with(sess, fake_ip)
+        mock_get_host_uuid_by_ip.assert_called_with(sess, fake_ip)
+        mock_gethostbyname.assert_called_with('someserver')
+        self.assertEqual('fake_host_ref', xenapi_sess.host_ref)
+        self.assertEqual('fake_host_uuid', xenapi_sess.host_uuid)
+        self.assertEqual('http://fake_master_url', xenapi_sess.url)
+
 
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
@@ -60,12 +168,13 @@ class SessionTestCase(base.TestCase):
                                         mock_verify_plugin_version):
         concurrent = 2
         originator = 'os-xenapi-nova'
+        fake_url = 'http://00.00.00.00'
         sess = mock.Mock()
         create_session.return_value = sess
         mock_version.return_value = ('version', 'brand')
         mock_platform_version.return_value = (2, 1, 0)
 
-        session.XenAPISession('http://someserver', 'username', 'password',
+        session.XenAPISession(fake_url, 'username', 'password',
                               originator=originator, concurrent=concurrent)
         self.assertEqual(concurrent, sess.login_with_password.call_count)
         self.assertEqual(concurrent, mock_timeout.call_count)
@@ -79,6 +188,7 @@ class SessionTestCase(base.TestCase):
                                      mock_call_plugin,
                                      mock_verify_plugin_version):
         sess = mock.Mock()
+        fake_url = 'http://00.00.00.00'
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
                                                   'product_brand': 'XenServer',
@@ -86,7 +196,7 @@ class SessionTestCase(base.TestCase):
         # mark relax-xsm-sr-check=True in /etc/xapi.conf
         mock_call_plugin.return_value = "True"
         xenapi_sess = session.XenAPISession(
-            'http://someserver', 'username', 'password')
+            fake_url, 'username', 'password')
         self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
 
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
@@ -98,6 +208,7 @@ class SessionTestCase(base.TestCase):
                                              mock_call_plugin,
                                              mock_verify_plugin_version):
         sess = mock.Mock()
+        fake_url = 'http://00.00.00.00'
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '6.5.0',
                                                   'product_brand': 'XenServer',
@@ -105,7 +216,7 @@ class SessionTestCase(base.TestCase):
         # mark no relax-xsm-sr-check setting in /etc/xapi.conf
         mock_call_plugin.return_value = ""
         xenapi_sess = session.XenAPISession(
-            'http://someserver', 'username', 'password')
+            fake_url, 'username', 'password')
         self.assertFalse(xenapi_sess.is_xsm_sr_check_relaxed())
 
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
@@ -117,6 +228,7 @@ class SessionTestCase(base.TestCase):
                                             mock_call_plugin,
                                             mock_verify_plugin_version):
         sess = mock.Mock()
+        fake_url = 'http://00.00.00.00'
         mock_create_session.return_value = sess
         mock_get_software_version.return_value = {'product_version': '7.0.0',
                                                   'product_brand': 'XenServer',
@@ -124,7 +236,7 @@ class SessionTestCase(base.TestCase):
         # mark no relax-xsm-sr-check in /etc/xapi.conf
         mock_call_plugin.return_value = ""
         xenapi_sess = session.XenAPISession(
-            'http://someserver', 'username', 'password')
+            fake_url, 'username', 'password')
         self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
 
 
