@@ -35,7 +35,6 @@ try:
     import xmlrpclib
 except ImportError:
     import six.moves.xmlrpc_client as xmlrpclib
-
 from os_xenapi.client import exception
 from os_xenapi.client.i18n import _
 from os_xenapi.client.i18n import _LW
@@ -85,10 +84,12 @@ class XenAPISession(object):
         self.concurrent = concurrent
         self._sessions = queue.Queue()
         self.host_checked = False
+        self.is_slave = False
+        self.ip = url[url.rfind('/') + 1:]
         self.url = self._create_first_session(url, user, pw)
         self._populate_session_pool(self.url, user, pw)
-        self.host_uuid = self._get_host_uuid()
-        self.host_ref = self._get_host_ref()
+        self.host_uuid = self._get_host_uuid(self.ip)
+        self.host_ref = self._get_host_ref(self.ip)
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
         self._verify_plugin_version()
@@ -123,10 +124,22 @@ class XenAPISession(object):
                 master = e.details[1]
                 url = self.swap_xapi_host(url, master)
                 session = self._create_session_and_login(url, user, pw)
+                self.is_slave = True
             else:
                 raise
         self._sessions.put(session)
         return url
+
+    def _get_slave_host_ref(self, session, host_ip):
+        rec_dict = session.xenapi.host.get_all_records_where(
+            'field "address"="%s"' % host_ip)
+        return rec_dict.keys()[0]
+
+    def _get_slave_host_uuid(self, session, host_ip):
+        rec_dict = session.xenapi.host.get_all_records_where(
+            'field "address"="%s"' % host_ip)
+        value = rec_dict.values()[0]
+        return value['uuid']
 
     def swap_xapi_host(self, url, host_addr):
         """Replace the XenServer address present in 'url' with 'host_addr'."""
@@ -138,10 +151,13 @@ class XenAPISession(object):
             session = self._create_session_and_login(url, user, pw)
             self._sessions.put(session)
 
-    def _get_host_uuid(self):
+    def _get_host_uuid(self, host_ip):
         with self._get_session() as session:
-            host_ref = session.xenapi.session.get_this_host(session.handle)
-            return session.xenapi.host.get_uuid(host_ref)
+            if self.is_slave:
+                return self._get_slave_host_uuid(session, host_ip)
+            else:
+                host_ref = session.xenapi.session.get_this_host(session.handle)
+                return session.xenapi.host.get_uuid(host_ref)
 
     def _get_product_version_and_brand(self):
         """Return tuple of (major, minor, rev)
@@ -189,10 +205,13 @@ class XenAPISession(object):
         finally:
             self._sessions.put(session)
 
-    def _get_host_ref(self):
+    def _get_host_ref(self, host_ip):
         """Return the xenapi host on which nova-compute runs on."""
         with self._get_session() as session:
-            return session.xenapi.host.get_by_uuid(self.host_uuid)
+            if self.is_slave:
+                return self._get_slave_host_ref(session, host_ip)
+            else:
+                return session.xenapi.host.get_by_uuid(self.host_uuid)
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
