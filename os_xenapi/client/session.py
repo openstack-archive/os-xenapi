@@ -85,10 +85,12 @@ class XenAPISession(object):
         self.concurrent = concurrent
         self._sessions = queue.Queue()
         self.host_checked = False
+        self.is_slave = False
+        self.ip = self._get_ip_from_url(url)
         self.url = self._create_first_session(url, user, pw)
         self._populate_session_pool(self.url, user, pw)
+        self.host_ref = self._get_host_ref(self.ip)
         self.host_uuid = self._get_host_uuid()
-        self.host_ref = self._get_host_ref()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
         self._verify_plugin_version()
@@ -123,10 +125,15 @@ class XenAPISession(object):
                 master = e.details[1]
                 url = self.swap_xapi_host(url, master)
                 session = self._create_session_and_login(url, user, pw)
+                self.is_slave = True
             else:
                 raise
         self._sessions.put(session)
         return url
+
+    def _get_ip_from_url(self, url):
+        url_parts = urllib.parse.urlparse(url)
+        return socket.gethostbyname(url_parts.netloc)
 
     def swap_xapi_host(self, url, host_addr):
         """Replace the XenServer address present in 'url' with 'host_addr'."""
@@ -140,8 +147,7 @@ class XenAPISession(object):
 
     def _get_host_uuid(self):
         with self._get_session() as session:
-            host_ref = session.xenapi.session.get_this_host(session.handle)
-            return session.xenapi.host.get_uuid(host_ref)
+            return session.xenapi.host.get_uuid(self.host_ref)
 
     def _get_product_version_and_brand(self):
         """Return tuple of (major, minor, rev)
@@ -189,10 +195,23 @@ class XenAPISession(object):
         finally:
             self._sessions.put(session)
 
-    def _get_host_ref(self):
-        """Return the xenapi host on which nova-compute runs on."""
+    def _get_host_ref(self, host_ip):
         with self._get_session() as session:
-            return session.xenapi.host.get_by_uuid(self.host_uuid)
+            if self.is_slave:
+                rec_dict = session.xenapi.PIF.get_all_records_where(
+                    'field "IP"="%s"' % host_ip)
+                if not rec_dict:
+                    raise XenAPI.Failure(
+                        ("ERROR, couldn't find host ref with ip \
+                        %(slave_ip)s ") % {'slave_ip': host_ip})
+                if len(rec_dict) > 1:
+                    raise XenAPI.Failure(
+                        ("ERROR, find more than one host ref with ip \
+                        %(slave_ip)s ") % {'slave_ip': host_ip})
+                value = list(rec_dict.values())[0]
+                return value['host']
+            else:
+                return session.xenapi.session.get_this_host(session.handle)
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
