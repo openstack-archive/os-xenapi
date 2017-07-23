@@ -148,3 +148,9 @@ class Pool(XenAPISessionObject):
     """Pool of hosts."""
     def __init__(self, session):
         super(Pool, self).__init__(session, "pool")
+
+
+class Task(XenAPISessionObject):
+    """XAPI task."""
+    def __init__(self, session):
+        super(Task, self).__init__(session, "task")

@@ -57,6 +57,7 @@ def apply_session_helpers(session):
     session.host = cli_objects.Host(session)
     session.network = cli_objects.Network(session)
     session.pool = cli_objects.Pool(session)
+    session.task = cli_objects.Task(session)
 
 
 class XenAPISession(object):
