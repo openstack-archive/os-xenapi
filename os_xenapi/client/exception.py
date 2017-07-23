@@ -57,3 +57,11 @@ class PluginImageNotFound(OsXenApiException):
 
 class SessionLoginTimeout(OsXenApiException):
     msg_fmt = _("Unable to log in to XenAPI (is the Dom0 disk full?)")
+
+
+class HostConnectionFailure(OsXenApiException):
+    msg_fmt = _("Failed connecting to host %(host_netloc)s")
+
+
+class VdiImportFailure(OsXenApiException):
+    msg_fmt = _("Failed importing VDI from VHD stream: vdi_ref=(%(vdi_ref)s)")
