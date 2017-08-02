@@ -16,8 +16,10 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+from distutils.version import StrictVersion
 import logging
 import os
+import re
 import time
 
 import dom0_pluginlib as pluginlib
@@ -35,14 +37,39 @@ def wait_for_dev(session, dev_path, max_seconds):
     return ""
 
 
+def _get_sfdisk_version():
+    out = utils.run_command(['/sbin/sfdisk', '-v'])
+    if out:
+        # Return the first two numbers from the version.
+        # In XS6.5, it's 2.13-pre7. Just return 2.13 for this case.
+        pattern = re.compile("(\d+)\.(\d+)")
+        match = pattern.search(out.split('\n')[0])
+        if match:
+            return match.group(0)
+
+
 def make_partition(session, dev, partition_start, partition_end):
+    # Since XS7.0 which has sfdisk V2.23, we observe sfdisk has a bug
+    # that sfdisk will wrongly calculate cylinders when specify Sector
+    # as unit (-uS). That bug will cause the partition operation failed.
+    # And that's fixed in 2.26. So as a workaround, let's use the option
+    # of '--force' for version <2.26 and >=2.23. '--force' will ignore
+    # the wrong cylinder value but work as expected.
+    VER_FIRST_ISSUE = '2.23'
+    VER_FIXED = '2.26'
     dev_path = utils.make_dev_path(dev)
 
     if partition_end != "-":
         raise pluginlib.PluginError("Can only create unbounded partitions")
 
-    utils.run_command(['sfdisk', '-uS', dev_path],
-                      '%s,;\n' % (partition_start))
+    sfdisk_ver = _get_sfdisk_version()
+    cmd_list = ['sfdisk', '-uS', dev_path]
+    if sfdisk_ver:
+        if StrictVersion(sfdisk_ver) >= StrictVersion(VER_FIRST_ISSUE) and \
+           StrictVersion(sfdisk_ver) < StrictVersion(VER_FIXED):
+            cmd_list = ['sfdisk', '--force', '-uS', dev_path]
+
+    utils.run_command(cmd_list, '%s,;\n' % (partition_start))
 
 
 def _mkfs(fs, path, label):
