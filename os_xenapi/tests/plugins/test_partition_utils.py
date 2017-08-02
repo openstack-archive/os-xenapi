@@ -100,10 +100,59 @@ class PartitionUtils(plugin_test.PluginTestBase):
         self.partition_utils._mkfs('swap', '/dev/sda1', 'ignored')
         mock_run.assert_called_with(['mkswap', '/dev/sda1'])
 
-    def test_make_partition(self):
+    def test_make_partition_sfdisk_v213(self):
         mock_run = self.mock_patch_object(self.partition_utils.utils,
                                           'run_command')
+        mock_get_version = self.mock_patch_object(
+            self.partition_utils, '_get_sfdisk_version')
+        mock_get_version.return_value = '2.13'
 
         self.partition_utils.make_partition('session', 'dev', 'start', '-')
 
+        mock_get_version.assert_called_with()
         mock_run.assert_called_with(['sfdisk', '-uS', '/dev/dev'], 'start,;\n')
+
+    def test_make_partition_sfdisk_v223(self):
+        mock_run = self.mock_patch_object(self.partition_utils.utils,
+                                          'run_command')
+        mock_get_version = self.mock_patch_object(
+            self.partition_utils, '_get_sfdisk_version')
+        mock_get_version.return_value = '2.23'
+
+        self.partition_utils.make_partition('session', 'dev', 'start', '-')
+
+        mock_get_version.assert_called_with()
+        mock_run.assert_called_with(['sfdisk', '--force', '-uS', '/dev/dev'],
+                                    'start,;\n')
+
+    def test_make_partition_sfdisk_v226(self):
+        mock_run = self.mock_patch_object(self.partition_utils.utils,
+                                          'run_command')
+        mock_get_version = self.mock_patch_object(
+            self.partition_utils, '_get_sfdisk_version')
+        mock_get_version.return_value = '2.26'
+
+        self.partition_utils.make_partition('session', 'dev', 'start', '-')
+
+        mock_get_version.assert_called_with()
+        mock_run.assert_called_with(['sfdisk', '-uS', '/dev/dev'], 'start,;\n')
+
+    def test_get_sfdisk_version_213pre7(self):
+        mock_run = self.mock_patch_object(
+            self.partition_utils.utils, 'run_command')
+        mock_run.return_value = 'sfdisk (util-linux 2.13-pre7)'
+
+        version = self.partition_utils._get_sfdisk_version()
+
+        mock_run.assert_called_with(['/sbin/sfdisk', '-v'])
+        self.assertEqual(version, '2.13')
+
+    def test_get_sfdisk_version_223(self):
+        mock_run = self.mock_patch_object(
+            self.partition_utils.utils, 'run_command')
+        mock_run.return_value = 'sfdisk from util-linux 2.23.2\n'
+
+        version = self.partition_utils._get_sfdisk_version()
+
+        mock_run.assert_called_with(['/sbin/sfdisk', '-v'])
+        self.assertEqual(version, '2.23')
