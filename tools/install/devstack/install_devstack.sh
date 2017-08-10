@@ -289,6 +289,15 @@ cp_it ~/.gitconfig $STAGING_DIR/opt/stack/.gitconfig
 cp_it ~/.vimrc $STAGING_DIR/opt/stack/.vimrc
 cp_it ~/.bashrc $STAGING_DIR/opt/stack/.bashrc
 
+# Journald default is to not persist logs to disk if /var/log/journal is
+# not present. Update the configuration to set storage to persistent which
+# will create /var/log/journal if necessary and store logs on disk. This
+# avoids the situation where test runs can fill the journald ring buffer
+# deleting older logs that may be important to the job.
+JOURNALD_CFG=$STAGING_DIR/etc/systemd/journald.conf
+if [ -f $JOURNALD_CFG ] ; then
+    sudo sed -i -e 's/#Storage=auto/Storage=persistent/' $JOURNALD_CFG
+fi
 
 # Configure run.sh
 DOMU_STACK_DIR=/opt/stack
