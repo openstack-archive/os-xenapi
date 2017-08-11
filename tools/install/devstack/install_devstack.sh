@@ -296,7 +296,7 @@ cp_it ~/.bashrc $STAGING_DIR/opt/stack/.bashrc
 # deleting older logs that may be important to the job.
 JOURNALD_CFG=$STAGING_DIR/etc/systemd/journald.conf
 if [ -f $JOURNALD_CFG ] ; then
-    sudo sed -i -e 's/#Storage=auto/Storage=persistent/' $JOURNALD_CFG
+    sed -i -e 's/#Storage=auto/Storage=persistent/' $JOURNALD_CFG
 fi
 
 # Configure run.sh
