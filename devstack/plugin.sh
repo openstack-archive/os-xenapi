@@ -190,6 +190,15 @@ function config_nova_compute {
     iniset $NOVA_CONF DEFAULT host "${dom0_hostname}-nova"
 }
 
+function config_cellv2 {
+    # Allow local conductor access nova_api database.
+    # In devstack, we only set one cell.
+    cell=1
+    db=nova_api
+    NOVA_CELL_CFG=${NOVA_CONF_DIR}/nova_cell${cell}.conf
+    iniset $NOVA_CELL_CFG api_database connection "$BASE_SQL_CONN/$db?client_encoding=utf8"
+}
+
 function config_ceilometer {
     if is_service_enabled ceilometer-acompute; then
         local ssh_dom0=$(get_dom0_ssh)
@@ -306,6 +315,8 @@ if [[ "$MODE" == "stack" ]]; then
             config_nova_compute
             config_ovs_agent
             config_ceilometer
+            # configure for cellv2
+            config_cellv2
             ;;
         extra)
             # Called near the end after layer 1 and 2 services have been started
