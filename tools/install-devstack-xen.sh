@@ -442,6 +442,9 @@ cat << LOCALCONF_CONTENT_ENDS_HERE > local.conf
 
 enable_plugin os-xenapi https://github.com/openstack/os-xenapi.git
 
+# workaround for bug/1709594
+CELLSV2_SETUP=singleconductor
+
 # Passwords
 MYSQL_PASSWORD=citrix
 SERVICE_TOKEN=citrix
