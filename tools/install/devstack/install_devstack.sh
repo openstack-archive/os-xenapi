@@ -71,7 +71,9 @@ fi
 # Configure Networking
 #
 
-MGT_NETWORK=`xe pif-list management=true params=network-uuid minimal=true`
+uuid=$(get_current_host_uuid)
+
+MGT_NETWORK=`xe pif-list management=true host-uuid=$uuid params=network-uuid minimal=true`
 MGT_BRIDGE_OR_NET_NAME=`xe network-list uuid=$MGT_NETWORK params=bridge minimal=true`
 
 setup_network "$VM_BRIDGE_OR_NET_NAME"
@@ -111,7 +113,7 @@ HOST_IP=$(xenapi_ip_on "$MGT_BRIDGE_OR_NET_NAME")
 
 #install the previous ubuntu VM
 
-vm_exist=$(xe vm-list name-label="$DEV_STACK_DOMU_NAME" --minimal)
+vm_exist=$(xe vm-list name-label="$DEV_STACK_DOMU_NAME" possible-hosts=$(get_current_host_uuid) --minimal)
 if [ "$vm_exist" != "" ]
 then
     echo "Uninstall the previous VM"
@@ -140,7 +142,7 @@ destroy_all_vifs_of "$DEV_STACK_DOMU_NAME"
 add_interface "$DEV_STACK_DOMU_NAME" "$MGT_BRIDGE_OR_NET_NAME" "0"
 
 # start the VM to run the prepare steps
-xe vm-start vm="$DEV_STACK_DOMU_NAME"
+xe vm-start vm="$DEV_STACK_DOMU_NAME" on=$(get_current_host_uuid)
 
 # Wait for prep script to finish and shutdown system
 wait_for_VM_to_halt "$DEV_STACK_DOMU_NAME"
@@ -180,7 +182,7 @@ fi
 #
 # Run DevStack VM
 #
-xe vm-start vm="$DEV_STACK_DOMU_NAME"
+xe vm-start vm="$DEV_STACK_DOMU_NAME" on=$(get_current_host_uuid)
 
 # Get hold of the Management IP of OpenStack VM
 OS_VM_MANAGEMENT_ADDRESS=$MGT_IP
@@ -246,7 +248,10 @@ if [ ! -d "$STAGING_DIR/opt/stack" ]; then
 fi
 
 rm -f $STAGING_DIR/opt/stack/local.conf
-XENSERVER_IP=$(xe host-list params=address minimal=true)
+host=$(get_current_host_uuid)
+pif=$(xe pif-list management=true host-uuid=$host --minimal)
+XENSERVER_IP=$(xe pif-param-get param-name=IP uuid=$pif)
+
 
 # Create an systemd task for devstack
 cat >$STAGING_DIR/etc/systemd/system/devstack.service << EOF
