@@ -198,6 +198,11 @@ function have_multiple_hosts {
     xe host-list --minimal | grep -q ","
 }
 
+function get_current_host_uuid {
+    source /etc/xensource-inventory;
+    echo $INSTALLATION_UUID
+}
+
 function attach_network {
     local bridge_or_net_name
 
@@ -206,10 +211,11 @@ function attach_network {
     local net
     local host
 
-    net=$(_network_uuid "$bridge_or_net_name")
-    host=$(xe host-list --minimal)
+    host=$(get_current_host_uuid)
 
-    xe network-attach uuid=$net host-uuid=$host
+    net=$(_network_uuid "$bridge_or_net_name")
+
+    xe network-attach uuid=$net host-uuid=$uuid
 }
 
 function set_vm_memory {
@@ -259,12 +265,13 @@ function max_vcpus {
     local host
     local cpu_count
 
-    host=$(xe host-list --minimal)
+    host=$(get_current_host_uuid)
+
     vm=$(_vm_uuid "$vm_name_label")
 
     cpu_count=$(xe host-param-get \
         param-name=cpu_info \
-        uuid=$host |
+        uuid=$uuid |
         sed -e 's/^.*cpu_count: \([0-9]*\);.*$/\1/g')
 
     if [ -z "$cpu_count" ]; then
@@ -294,6 +301,46 @@ function max_vcpus {
     xe vm-param-set uuid=$vm VCPUs-at-startup=$cpu_count
 }
 
+function get_template {
+    local tmp_name="$1"
+    local host="$2"
+    tmp=$(xe template-list name-label="$tmp_name" --minimal)
+    if [[ $tmp == *","* ]]; then
+        tmp_group=tmp
+        tmp=$(xe template-list name-label="$tmp_name" \
+        possible-hosts=$host --minimal)
+        # Current host have no template
+        if [[ -z $tmp ]]; then
+            tmp=${tmp_group##*,}
+        fi
+    fi
+    echo $tmp
+}
+
+function clean_template_other_conf {
+    local tmp_name="$1"
+    tmp=$(xe template-list name-label="$tmp_name" --minimal)
+    if [ -n "\$tmp" ]; then
+        echo "  $tmp clean other configure"
+        IFS=','
+        for i in "\${tmp[@]}"; do
+            xe template-param-clear param-name=other-config uuid=$i > /dev/null
+        done
+    fi
+}
+
+function uninstall_template {
+    local tmp_name="$1"
+    tmp=$(xe template-list name-label="$tmp_name" --minimal)
+    if [ -n "\$tmp" ]; then
+        echo "  $tmp already exist, uninstalling"
+        IFS=','
+        for i in "\${tmp[@]}"; do
+            xe template-uninstall template-uuid="\$i" force=true > /dev/null
+        done
+    fi
+}
+
 function get_domid {
     local vm_name_label
 
@@ -307,8 +354,8 @@ function install_conntrack_tools {
     local xs_ver_major
     local centos_ver
     local conntrack_conf
-    xs_host=$(xe host-list --minimal)
-    xs_ver_major=$(xe host-param-get uuid=$xs_host param-name=software-version param-key=product_version_text_short | cut -d'.' -f 1)
+    host=$(get_current_host_uuid)
+    xs_ver_major=$(xe host-param-get uuid=$uuid param-name=software-version param-key=product_version_text_short | cut -d'.' -f 1)
     if [ $xs_ver_major -gt 6 ]; then
         # Only support conntrack-tools in Dom0 with XS7.0 and above
         if [ ! -f /usr/sbin/conntrackd ]; then

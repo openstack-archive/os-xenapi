@@ -277,7 +277,10 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
+if [ JEOS_TEMPLATE==*,* ]; then
+    JEOS_TEMPLATE=${JEOS_TEMPLATE##*,}
+fi
 
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: $JEOS_TEMP_NAME not found"
@@ -359,15 +362,6 @@ else
     exit 1
 fi
 
-echo -n "Get the IP address of XenServer..."
-XENSERVER_IP=$(on_xenserver << GET_XENSERVER_IP
-xe host-list params=address minimal=true
-GET_XENSERVER_IP
-)
-if [ -z "$XENSERVER_IP" ]; then
-    echo "Failed to detect the IP address of XenServer"
-    exit 1
-fi
 echo "OK"
 
 if [ -n "$SUPP_PACK_URL" ]; then
@@ -389,11 +383,14 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
 
 if [ -n "\$JEOS_TEMPLATE" ]; then
     echo "  $JEOS_TEMP_NAME already exist, uninstalling"
-    xe template-uninstall template-uuid="\$JEOS_TEMPLATE" force=true > /dev/null
+    IFS=','
+    for i in "\${JEOS_TEMPLATE[@]}"; do
+        xe template-uninstall template-uuid="\$i" force=true > /dev/null
+    done
 fi
 
 rm -f $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
@@ -403,7 +400,7 @@ echo "  importing $TMP_TEMPLATE_DIR/jeos-for-devstack.xva"
 xe vm-import filename=$TMP_TEMPLATE_DIR/jeos-for-devstack.xva
 rm -rf $TMP_TEMPLATE_DIR
 echo "  verify template imported"
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: template $JEOS_TEMP_NAME does not exist after import."
     exit 1
@@ -415,6 +412,15 @@ fi
 
 TMPDIR=$(echo "mktemp -d" | on_xenserver)
 
+OS-XENAPI-DIR="root/os-xenapi"
+
+if [ -d $OS-XENAPI-DIR]; then
+set +u
+DOM0_TOOL_DIR="$OS-XENAPI-DIR/tools"
+DOM0_INSTALL_DIR="$DOM0_TOOL_DIR/install"
+copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
+
+else
 set +u
 DOM0_OPT_DIR=$TMPDIR/domU
 DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
@@ -426,6 +432,7 @@ copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
     cd $DOM0_OPT_DIR
     wget --no-check-certificate "$OS_XENAPI_SRC"
     unzip -o master.zip -d $DOM0_OS_API_UNZIP_DIR
+fi
     cd $DOM0_INSTALL_DIR
 
     # override items in xenrc
@@ -477,8 +484,8 @@ LOGFILE=${LOGDIR}/stack.log
 VERBOSE=True
 
 # XenAPI specific
-XENAPI_CONNECTION_URL="http://$XENSERVER_IP"
-VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER_IP"
+XENAPI_CONNECTION_URL="http://$XENSERVER"
+VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER"
 
 # Neutron specific part
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch
