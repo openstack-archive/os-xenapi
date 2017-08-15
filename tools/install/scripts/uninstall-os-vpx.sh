@@ -19,6 +19,11 @@
 
 set -ex
 
+THIS_DIR=$(cd $(dirname "$0") && pwd)
+COMM_DIR="$THIS_DIR/../common"
+# xapi functions
+. $COMM_DIR/functions
+
 # By default, don't remove the templates
 REMOVE_TEMPLATES=${REMOVE_TEMPLATES:-"false"}
 if [ "$1" = "--remove-templates" ]; then
@@ -75,14 +80,15 @@ uninstall_template()
     xe template-uninstall template-uuid=$vm_uuid force=true >/dev/null
 }
 
-# remove the VMs and their disks
-for u in $(xe_min vm-list other-config:os-vpx=true | sed -e 's/,/ /g'); do
+host=$(get_current_host_uuid)
+# remove the VMs and their disks on this host
+for u in $(xe_min vm-list resident-on=$host other-config:os-vpx=true | sed -e 's/,/ /g'); do
     uninstall "$u"
 done
 
 # remove the templates
 if [ "$REMOVE_TEMPLATES" == "true" ]; then
-    for u in $(xe_min template-list other-config:os-vpx=true | sed -e 's/,/ /g'); do
+    for u in $(xe_min template-list possible-hosts=$host other-config:os-vpx=true | sed -e 's/,/ /g'); do
         uninstall_template "$u"
     done
 fi
