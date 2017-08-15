@@ -16,6 +16,10 @@ THIS_DIR=$(cd $(dirname "$0") && pwd)
 SCRIPT_DIR="$THIS_DIR/../scripts"
 COMM_DIR="$THIS_DIR/../common"
 CONF_DIR="$THIS_DIR/../conf"
+
+# xapi functions
+. $COMM_DIR/functions
+
 # For default setings see xenrc
 source $CONF_DIR/xenrc
 
@@ -23,8 +27,13 @@ source $CONF_DIR/xenrc
 preseed_url=$1
 
 # Delete template or skip template creation as required
+uuid=$(get_current_host_uuid)
 previous_template=$(xe template-list name-label="$UBUNTU_INST_TEMPLATE_NAME" \
     params=uuid --minimal)
+if [[ $previous_template == *","* ]]; then
+    previous_template=$(xe template-list name-label="$UBUNTU_INST_TEMPLATE_NAME" \
+    possible-hosts=$uuid params=uuid --minimal)
+fi
 if [ -n "$previous_template" ]; then
     if $CLEAN_TEMPLATES; then
         xe template-param-clear param-name=other-config uuid=$previous_template
@@ -41,6 +50,16 @@ builtin_uuid=$(xe template-list name-label="$builtin_name" --minimal)
 if [[ -z $builtin_uuid ]]; then
     echo "Can't find the Debian Squeeze 32bit template on your XenServer."
     exit 1
+fi
+# More than one uuid found
+if [[ $builtin_uuid == *","* ]]; then
+    builtin_uuid_group=builtin_uuid
+    builtin_uuid=$(xe template-list name-label="$builtin_name" \
+    possible-hosts=$uuid --minimal)
+    # Current host have no template
+    if [[ -z $builtin_uuid ]]; then
+        builtin_uuid=${builtin_uuid_group##*,}
+    fi
 fi
 
 # Clone built-in template to create new template

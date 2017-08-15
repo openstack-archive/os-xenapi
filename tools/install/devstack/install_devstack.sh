@@ -71,7 +71,9 @@ fi
 # Configure Networking
 #
 
-MGT_NETWORK=`xe pif-list management=true params=network-uuid minimal=true`
+uuid=$(get_current_host_uuid)
+
+MGT_NETWORK=`xe pif-list management=true host-uuid=$uuid params=network-uuid minimal=true`
 MGT_BRIDGE_OR_NET_NAME=`xe network-list uuid=$MGT_NETWORK params=bridge minimal=true`
 
 setup_network "$VM_BRIDGE_OR_NET_NAME"
@@ -246,7 +248,7 @@ if [ ! -d "$STAGING_DIR/opt/stack" ]; then
 fi
 
 rm -f $STAGING_DIR/opt/stack/local.conf
-XENSERVER_IP=$(xe host-list params=address minimal=true)
+XENSERVER_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
 
 # Create an systemd task for devstack
 cat >$STAGING_DIR/etc/systemd/system/devstack.service << EOF
