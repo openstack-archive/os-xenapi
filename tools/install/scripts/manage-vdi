@@ -22,12 +22,17 @@ function run_udev_settle() {
   fi
 }
 
+function get_current_host_uuid {
+    source /etc/xensource-inventory;
+    echo $INSTALLATION_UUID
+}
+
 vm_uuid=$(xe_min vm-list name-label="$vm")
 vdi_uuid=$(xe_min vbd-list params=vdi-uuid vm-uuid="$vm_uuid" \
                            userdevice="$device")
 
-
-dom0_uuid=$(xe_min vm-list is-control-domain=true)
+host_uuid=$(get_current_host_uuid)
+dom0_uuid=$(xe_min vm-list is-control-domain=true resident-on=$host_uuid)
 
 function get_mount_device() {
   vbd_uuid=$1
