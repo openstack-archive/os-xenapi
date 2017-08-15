@@ -278,6 +278,9 @@ set -eu
 mkdir -p $TMP_TEMPLATE_DIR
 
 JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+if [ JEOS_TEMPLATE==*,* ]; then
+    JEOS_TEMPLATE=${JEOS_TEMPLATE##*,}
+fi
 
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: $JEOS_TEMP_NAME not found"
@@ -359,15 +362,6 @@ else
     exit 1
 fi
 
-echo -n "Get the IP address of XenServer..."
-XENSERVER_IP=$(on_xenserver << GET_XENSERVER_IP
-xe host-list params=address minimal=true
-GET_XENSERVER_IP
-)
-if [ -z "$XENSERVER_IP" ]; then
-    echo "Failed to detect the IP address of XenServer"
-    exit 1
-fi
 echo "OK"
 
 if [ -n "$SUPP_PACK_URL" ]; then
@@ -393,7 +387,10 @@ JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
 
 if [ -n "\$JEOS_TEMPLATE" ]; then
     echo "  $JEOS_TEMP_NAME already exist, uninstalling"
-    xe template-uninstall template-uuid="\$JEOS_TEMPLATE" force=true > /dev/null
+    IFS=','
+    for i in "\${JEOS_TEMPLATE[@]}"; do
+        xe template-uninstall template-uuid="\$i" force=true > /dev/null
+    done
 fi
 
 rm -f $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
@@ -477,8 +474,8 @@ LOGFILE=${LOGDIR}/stack.log
 VERBOSE=True
 
 # XenAPI specific
-XENAPI_CONNECTION_URL="http://$XENSERVER_IP"
-VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER_IP"
+XENAPI_CONNECTION_URL="http://$XENSERVER"
+VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER"
 
 # Neutron specific part
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch
