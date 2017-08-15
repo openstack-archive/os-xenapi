@@ -22,6 +22,8 @@ positional arguments:
 optional arguments:
  -t TEST_TYPE          Type of the tests to run. One of [none, exercise, smoke, full]
                        defaults to none
+ -c LOCAL_REPOSITORY   Priority use the local os-xenapi install repository if this value
+                       has been set
  -d DEVSTACK_SRC       An URL pointing to a tar.gz snapshot of devstack. This
                        defaults to the official devstack repository.  Can also be a local
                        file location.
@@ -103,7 +105,7 @@ REMAINING_OPTIONS="$#"
 
 # Get optional parameters
 set +e
-while getopts ":t:d:fnl:j:e:o:s:w:a:i:m:" flag; do
+while getopts ":t:d:fnl:j:e:o:s:w:a:i:m:c:" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         t)
@@ -160,6 +162,10 @@ while getopts ":t:d:fnl:j:e:o:s:w:a:i:m:" flag; do
             ;;
         m)
             NODE_NAME="$OPTARG"
+            REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
+        c)
+            LOCAL_REPOSITORY="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
         \?)
@@ -277,7 +283,10 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
+if [ JEOS_TEMPLATE==*,* ]; then
+    JEOS_TEMPLATE=${JEOS_TEMPLATE##*,}
+fi
 
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: $JEOS_TEMP_NAME not found"
@@ -359,15 +368,6 @@ else
     exit 1
 fi
 
-echo -n "Get the IP address of XenServer..."
-XENSERVER_IP=$(on_xenserver << GET_XENSERVER_IP
-xe host-list params=address minimal=true
-GET_XENSERVER_IP
-)
-if [ -z "$XENSERVER_IP" ]; then
-    echo "Failed to detect the IP address of XenServer"
-    exit 1
-fi
 echo "OK"
 
 if [ -n "$SUPP_PACK_URL" ]; then
@@ -389,11 +389,14 @@ set -eu
 
 mkdir -p $TMP_TEMPLATE_DIR
 
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
 
 if [ -n "\$JEOS_TEMPLATE" ]; then
     echo "  $JEOS_TEMP_NAME already exist, uninstalling"
-    xe template-uninstall template-uuid="\$JEOS_TEMPLATE" force=true > /dev/null
+    IFS=','
+    for i in "\${JEOS_TEMPLATE[@]}"; do
+        xe template-uninstall template-uuid="\$i" force=true > /dev/null
+    done
 fi
 
 rm -f $TMP_TEMPLATE_DIR/jeos-for-devstack.xva
@@ -403,7 +406,7 @@ echo "  importing $TMP_TEMPLATE_DIR/jeos-for-devstack.xva"
 xe vm-import filename=$TMP_TEMPLATE_DIR/jeos-for-devstack.xva
 rm -rf $TMP_TEMPLATE_DIR
 echo "  verify template imported"
-JEOS_TEMPLATE="\$(xe template-list name-label=$JEOS_TEMP_NAME --minimal)"
+JEOS_TEMPLATE="\$(. "$COMM_DIR/functions" &&  get_template $JEOS_TEMP_NAME $(get_current_host_uuid))
 if [ -z "\$JEOS_TEMPLATE" ]; then
     echo "FATAL: template $JEOS_TEMP_NAME does not exist after import."
     exit 1
@@ -417,19 +420,26 @@ TMPDIR=$(echo "mktemp -d" | on_xenserver)
 
 set +u
 DOM0_OPT_DIR=$TMPDIR/domU
-DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
-DOM0_OS_API_DIR="$DOM0_OS_API_UNZIP_DIR/os-xenapi-*"
-DOM0_TOOL_DIR="$DOM0_OS_API_DIR/tools"
-DOM0_INSTALL_DIR="$DOM0_TOOL_DIR/install"
+
+
 copy_logs_on_failure on_xenserver << END_OF_XENSERVER_COMMANDS
-    mkdir $DOM0_OPT_DIR
-    cd $DOM0_OPT_DIR
-    wget --no-check-certificate "$OS_XENAPI_SRC"
-    unzip -o master.zip -d $DOM0_OS_API_UNZIP_DIR
-    cd $DOM0_INSTALL_DIR
+
+    if [ -d  "$LOCAL_REPOSITORY" ]; then
+        DOM0_OS_API_DIR="$LOCAL_REPOSITORY/os-xenapi"
+    else
+        DOM0_OS_API_UNZIP_DIR="$DOM0_OPT_DIR/os-xenapi"
+        DOM0_OS_API_DIR="\$DOM0_OS_API_UNZIP_DIR/os-xenapi-*"
+        mkdir $DOM0_OPT_DIR
+        cd $DOM0_OPT_DIR
+        wget --no-check-certificate "$OS_XENAPI_SRC"
+        unzip -o master.zip -d \$DOM0_OS_API_UNZIP_DIR
+    fi
+    DOM0_TOOL_DIR="\$DOM0_OS_API_DIR/tools"
+    DOM0_INSTALL_DIR="\$DOM0_TOOL_DIR/install"
+    cd \$DOM0_INSTALL_DIR
 
     # override items in xenrc
-    sed -i "s/DevStackOSDomU/$NODE_NAME/g" $DOM0_INSTALL_DIR/conf/xenrc
+    sed -i "s/DevStackOSDomU/$NODE_NAME/g" \$DOM0_INSTALL_DIR/conf/xenrc
 
     # prepare local.conf
 cat << LOCALCONF_CONTENT_ENDS_HERE > local.conf
@@ -477,8 +487,8 @@ LOGFILE=${LOGDIR}/stack.log
 VERBOSE=True
 
 # XenAPI specific
-XENAPI_CONNECTION_URL="http://$XENSERVER_IP"
-VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER_IP"
+XENAPI_CONNECTION_URL="http://$XENSERVER"
+VNCSERVER_PROXYCLIENT_ADDRESS="$XENSERVER"
 
 # Neutron specific part
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch
@@ -515,7 +525,7 @@ disk_allocation_ratio = 2.0
 LOCALCONF_CONTENT_ENDS_HERE
 
 # begin installation process
-cd $DOM0_TOOL_DIR
+cd \$DOM0_TOOL_DIR
 if [ $FORCE_SR_REPLACEMENT = 'true' ]; then
     ./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH -f
 else

@@ -44,11 +44,11 @@ while getopts ":d:l:" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         d)
-            DEVSTACK_SRC="$DEVSTACK_SRC"
+            DEVSTACK_SRC="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
         l)
-            LOGDIR="$LOGDIR"
+            LOGDIR="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
         \?)
@@ -71,7 +71,9 @@ fi
 # Configure Networking
 #
 
-MGT_NETWORK=`xe pif-list management=true params=network-uuid minimal=true`
+uuid=$(get_current_host_uuid)
+
+MGT_NETWORK=`xe pif-list management=true host-uuid=$uuid params=network-uuid minimal=true`
 MGT_BRIDGE_OR_NET_NAME=`xe network-list uuid=$MGT_NETWORK params=bridge minimal=true`
 
 setup_network "$VM_BRIDGE_OR_NET_NAME"
@@ -140,7 +142,7 @@ destroy_all_vifs_of "$DEV_STACK_DOMU_NAME"
 add_interface "$DEV_STACK_DOMU_NAME" "$MGT_BRIDGE_OR_NET_NAME" "0"
 
 # start the VM to run the prepare steps
-xe vm-start vm="$DEV_STACK_DOMU_NAME"
+xe vm-start vm="$DEV_STACK_DOMU_NAME" on=$(get_current_host_uuid)
 
 # Wait for prep script to finish and shutdown system
 wait_for_VM_to_halt "$DEV_STACK_DOMU_NAME"
@@ -159,7 +161,6 @@ add_interface "$DEV_STACK_DOMU_NAME" "$PUB_BRIDGE_OR_NET_NAME" "$PUB_DEV_NR"
 # persistant the VM's interfaces
 #
 $SCRIPT_DIR/persist_domU_interfaces.sh "$DEV_STACK_DOMU_NAME"
-
 
 FLAT_NETWORK_BRIDGE="${FLAT_NETWORK_BRIDGE:-$(bridge_for "$VM_BRIDGE_OR_NET_NAME")}"
 append_kernel_cmdline "$DEV_STACK_DOMU_NAME" "flat_network_bridge=${FLAT_NETWORK_BRIDGE}"
@@ -180,7 +181,7 @@ fi
 #
 # Run DevStack VM
 #
-xe vm-start vm="$DEV_STACK_DOMU_NAME"
+xe vm-start vm="$DEV_STACK_DOMU_NAME" on=$(get_current_host_uuid)
 
 # Get hold of the Management IP of OpenStack VM
 OS_VM_MANAGEMENT_ADDRESS=$MGT_IP
@@ -246,7 +247,10 @@ if [ ! -d "$STAGING_DIR/opt/stack" ]; then
 fi
 
 rm -f $STAGING_DIR/opt/stack/local.conf
-XENSERVER_IP=$(xe host-list params=address minimal=true)
+host=$(get_current_host_uuid)
+pif=$(xe pif-list management=true host-uuid=$host --minimal)
+XENSERVER_IP=$(xe pif-param-get param-name=IP uuid=$pif)
+
 
 # Create an systemd task for devstack
 cat >$STAGING_DIR/etc/systemd/system/devstack.service << EOF
