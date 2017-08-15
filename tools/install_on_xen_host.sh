@@ -153,7 +153,7 @@ fi
 $DEV_STACK_DIR/install_devstack.sh -d $DEVSTACK_SRC -l $LOGDIR $OPTARGS
 
 #start openstack domU VM
-xe vm-start vm="$DEV_STACK_DOMU_NAME"
+xe vm-start vm="$DEV_STACK_DOMU_NAME" on=$(get_current_host_uuid)
 
 # If we have copied our ssh credentials, use ssh to monitor while the installation runs
 function ssh_no_check {
