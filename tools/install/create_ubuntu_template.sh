@@ -38,17 +38,18 @@ cd $THIS_DIR
 # Die if multiple hosts listed
 if have_multiple_hosts; then
     cat >&2 << EOF
-ERROR: multiple hosts found. This might mean that the XenServer is a member
-of a pool - Exiting.
+Info: multiple hosts found. This might mean that the XenServer is a member
+of a pool.
 EOF
-    exit 1
 fi
 
 #
 # Configure Networking
 #
 
-MGT_NETWORK=`xe pif-list management=true params=network-uuid minimal=true`
+host=$(get_current_host_uuid)
+
+MGT_NETWORK=`xe pif-list management=true host-uuid=$host params=network-uuid minimal=true`
 HOST_MGT_BRIDGE_OR_NET_NAME=`xe network-list uuid=$MGT_NETWORK params=bridge minimal=true`
 
 setup_network "$HOST_MGT_BRIDGE_OR_NET_NAME"
@@ -109,8 +110,8 @@ fi
 # Create Ubuntu VM template
 # and/or create VM from template
 #
+templateuuid=$(get_template $TNAME $host)
 
-templateuuid=$(xe template-list name-label="$TNAME")
 if [ -z "$templateuuid" ]; then
     #
     # Install Ubuntu over network
@@ -191,7 +192,7 @@ if [ -z "$templateuuid" ]; then
 else
     echo "the template has already exist"
 fi
-template_uuid=$(xe_min template-list name-label="$TNAME")
+template_uuid=$(get_template "$TNAME" uuid)
 exist_val=$(xe template-param-get uuid=$template_uuid param-name=PV-args)
 if [ -n "$exist_val" ];
     then
