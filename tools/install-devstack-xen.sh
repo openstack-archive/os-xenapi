@@ -492,11 +492,11 @@ LOCALCONF_CONTENT_ENDS_HERE
 
 if [ "$NODE_TYPE" = "all" ]; then
 cat << LOCALCONF_CONTENT_ENDS_HERE >> local.conf
-ENABLED_SERVICES+=neutron,q-domua
+ENABLED_SERVICES+=,neutron,q-domua
 LOCALCONF_CONTENT_ENDS_HERE
 else
 cat << LOCALCONF_CONTENT_ENDS_HERE >> local.conf
-ENABLED_SERVICES=neutron,q-agt,q-domua,n-cpu,placement-client
+ENABLED_SERVICES=neutron,q-agt,q-domua,n-cpu,placement-client,dstat
 SERVICE_HOST=$CONTROLLER_IP
 MYSQL_HOST=$CONTROLLER_IP
 GLANCE_HOST=$CONTROLLER_IP
