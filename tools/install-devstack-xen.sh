@@ -43,6 +43,8 @@ optional arguments:
  -a NODE_TYPE          OpenStack node type [all, compute]
  -m NODE_NAME          DomU name for installing OpenStack
  -i CONTROLLER_IP      IP address of controller node, must set it when installing compute node
+ -r DISABLE_JOURNALING Disable journaling if this flag is set. It will reduce disk IO, but
+                       may lead to file system unstable after long time use
 
 flags:
  -f                 Force SR replacement. If your XenServer has an LVM type SR,
@@ -87,6 +89,7 @@ JEOS_TEMP_NAME="jeos_template_for_ubuntu"
 NODE_TYPE="all"
 NODE_NAME=""
 CONTROLLER_IP=""
+DISABLE_JOURNALING="false"
 
 # Get Positional arguments
 set +u
@@ -103,7 +106,7 @@ REMAINING_OPTIONS="$#"
 
 # Get optional parameters
 set +e
-while getopts ":t:d:fnl:j:e:o:s:w:a:i:m:" flag; do
+while getopts ":t:d:fnrl:j:e:o:s:w:a:i:m:" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         t)
@@ -161,6 +164,9 @@ while getopts ":t:d:fnl:j:e:o:s:w:a:i:m:" flag; do
         m)
             NODE_NAME="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
+        r)
+            DISABLE_JOURNALING="true"
             ;;
         \?)
             print_usage_and_die "Invalid option -$OPTARG"
@@ -516,11 +522,14 @@ LOCALCONF_CONTENT_ENDS_HERE
 
 # begin installation process
 cd $DOM0_TOOL_DIR
+OPTARGS=""
 if [ $FORCE_SR_REPLACEMENT = 'true' ]; then
-    ./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH -f
-else
-    ./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH
+  OPTARGS="$OPTARGS -f"
 fi
+if [ $DISABLE_JOURNALING = 'true' ]; then
+  OPTARGS="$OPTARGS -r"
+fi
+./install_on_xen_host.sh -d $DEVSTACK_SRC -l $LOGDIR -w $WAIT_TILL_LAUNCH $OPTARGS
 
 END_OF_XENSERVER_COMMANDS
 
