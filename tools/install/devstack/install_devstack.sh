@@ -35,21 +35,25 @@ source $CONF_DIR/xenrc
 # Defaults for optional arguments
 DEVSTACK_SRC=${DEVSTACK_SRC:-"https://github.com/openstack-dev/devstack"}
 LOGDIR="/opt/stack/devstack_logs"
+DISABLE_JOURNALING="false"
 
 # Number of options passed to this script
 REMAINING_OPTIONS="$#"
 # Get optional parameters
 set +e
-while getopts ":d:l:" flag; do
+while getopts ":d:l:r" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         d)
-            DEVSTACK_SRC="$DEVSTACK_SRC"
+            DEVSTACK_SRC="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
         l)
-            LOGDIR="$LOGDIR"
+            LOGDIR="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
+        r)
+            DISABLE_JOURNALING="true"
             ;;
         \?)
             print_usage_and_die "Invalid option -$OPTARG"
@@ -163,6 +167,28 @@ $SCRIPT_DIR/persist_domU_interfaces.sh "$DEV_STACK_DOMU_NAME"
 
 FLAT_NETWORK_BRIDGE="${FLAT_NETWORK_BRIDGE:-$(bridge_for "$VM_BRIDGE_OR_NET_NAME")}"
 append_kernel_cmdline "$DEV_STACK_DOMU_NAME" "flat_network_bridge=${FLAT_NETWORK_BRIDGE}"
+
+# Disable FS journaling. It would reduce disk IO, but may lead to file system
+# unstable after long time use
+if [ "$DISABLE_JOURNALING" = "true" ]; then
+    vm_vbd=$(xe vbd-list vm-name-label=$DEV_STACK_DOMU_NAME --minimal)
+    vm_vdi=$(xe vdi-list vbd-uuids=$vm_vbd --minimal)
+
+    dom_zero_uuid=$(xe vm-list dom-id=0 resident-on=$(get_current_host_uuid) --minimal)
+    tmp_vbd=$(xe vbd-create device=autodetect bootable=false mode=RW type=Disk vdi-uuid=$vm_vdi vm-uuid=$dom_zero_uuid)
+    xe vbd-plug uuid=$tmp_vbd
+    sr_id=$(get_local_sr)
+    kpartx -p p -avs  /dev/sm/backend/$sr_id/$vm_vdi
+    echo "********Before disable FS journaling********"
+    tune2fs -l  /dev/mapper/${vm_vdi}p1 | grep "Filesystem features"
+    echo "********Disable FS journaling********"
+    tune2fs -O ^has_journal /dev/mapper/${vm_vdi}p1
+    echo "********After disable FS journaling********"
+    tune2fs -l  /dev/mapper/${vm_vdi}p1 | grep "Filesystem features"
+    kpartx -p p -dvs  /dev/sm/backend/$sr_id/$vm_vdi
+    xe vbd-unplug uuid=$tmp_vbd timeout=60
+    xe vbd-destroy uuid=$tmp_vbd
+fi
 
 # Add a separate xvdb, if it was requested
 if [[ "0" != "$XEN_XVDB_SIZE_GB" ]]; then
