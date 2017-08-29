@@ -13,6 +13,7 @@ INSTALL_DIR="$THIS_DIR/install"
 COMM_DIR="$INSTALL_DIR/common"
 CONF_DIR="$INSTALL_DIR/conf"
 DEV_STACK_DIR="$INSTALL_DIR/devstack"
+DISABLE_JOURNALING="false"
 
 . $COMM_DIR/functions
 # Source params
@@ -33,6 +34,7 @@ optional arguments:
  -l LOG_FILE_DIRECTORY The directory in which to store the devstack logs on failure.
  -w WAIT_TILL_LAUNCH   Set it to 1 if user want to pending on the installation until
                        it is done
+ -g DISABLE_JOURNALING Disable journaling if set to true
 
 flags:
  -f                 Force SR replacement. If your XenServer has an LVM type SR,
@@ -60,7 +62,7 @@ REMAINING_OPTIONS="$#"
 
 # Get optional parameters
 set +e
-while getopts ":d:fl:w:" flag; do
+while getopts ":d:fl:w:r:" flag; do
     REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
     case "$flag" in
         d)
@@ -76,6 +78,10 @@ while getopts ":d:fl:w:" flag; do
             ;;
         w)
             WAIT_TILL_LAUNCH="$OPTARG"
+            REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
+            ;;
+        r)
+            DISABLE_JOURNALING="$OPTARG"
             REMAINING_OPTIONS=$(expr "$REMAINING_OPTIONS" - 1)
             ;;
         \?)
@@ -140,7 +146,7 @@ if [ -n "${EXIT_AFTER_JEOS_INSTALLATION:-}" ]; then
 fi
 
 # install DevStack on the VM
-$DEV_STACK_DIR/install_devstack.sh -d $DEVSTACK_SRC -l $LOGDIR
+$DEV_STACK_DIR/install_devstack.sh -d $DEVSTACK_SRC -l $LOGDIR -r $DISABLE_JOURNALING
 
 #start openstack domU VM
 xe vm-start vm="$DEV_STACK_DOMU_NAME"
