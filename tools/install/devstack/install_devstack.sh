@@ -174,7 +174,7 @@ append_kernel_cmdline "$DEV_STACK_DOMU_NAME" "flat_network_bridge=${FLAT_NETWORK
 if [ "$DISABLE_JOURNALING" = "true" ]; then
     vm_vbd=$(xe vbd-list vm-name-label=$DEV_STACK_DOMU_NAME --minimal)
     vm_vdi=$(xe vdi-list vbd-uuids=$vm_vbd --minimal)
-    dom_zero_uuid=$(xe vm-list dom-id=0 --minimal)
+    dom_zero_uuid=$(xe vm-list dom-id=0 resident-on=$host_uuid --minimal)
     tmp_vbd=$(xe vbd-create device=autodetect bootable=false mode=RW type=Disk vdi-uuid=$vm_vdi vm-uuid=$dom_zero_uuid)
     xe vbd-plug uuid=$tmp_vbd
     sr_id=$(get_local_sr)
