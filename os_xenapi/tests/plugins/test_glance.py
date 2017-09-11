@@ -330,21 +330,34 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_extra_headers = {}
         fake_properties = {}
         fake_endpoint = 'http://fake_netloc/fake_path'
+        fake_image_id = 'fake_image_id'
         expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
             'glance_endpoint': fake_endpoint,
-            'image_id': 'fake_image_id'}
-        expected_wsgi_path = '/fake_path/v2/images/%s' % 'fake_image_id'
+            'image_id': fake_image_id}
+        expected_wsgi_path = '/fake_path/v2/images/%s' % fake_image_id
+        expect_url_parts = urlparse(expected_url)
+
+        expected_mgt_url = "%(glance_endpoint)s/v2/images/%(image_id)s" % {
+            'glance_endpoint': fake_endpoint,
+            'image_id': fake_image_id}
+        fake_mgt_parts = urlparse(expected_mgt_url)
+        fake_mgt_path = fake_mgt_parts[2]
 
         self.glance._upload_tarball_by_url_v2(
-            'fake_staging_path', 'fake_image_id', fake_endpoint,
+            'fake_staging_path', fake_image_id, fake_endpoint,
             fake_extra_headers, fake_properties)
 
-        self.assertTrue(mock_HTTPConn.called)
+        mock_HTTPConn.assert_called_with(expect_url_parts[0],
+                                         expect_url_parts[1])
         mock_validate_image.assert_called_with(fake_conn,
                                                expected_url,
                                                fake_extra_headers,
                                                expected_wsgi_path)
-        self.assertTrue(mock_update_image_meta.called)
+        mock_update_image_meta.assert_called_with(fake_conn,
+                                                  fake_extra_headers,
+                                                  fake_properties,
+                                                  fake_mgt_path)
+
         self.assertTrue(mock_create_tarball.called)
         self.assertTrue(
             mock_HTTPConn.return_value.getresponse.called)
@@ -368,17 +381,29 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_extra_headers = {}
         fake_properties = {}
         fake_endpoint = 'https://fake_netloc/fake_path'
+        fake_image_id = 'fake_image_id'
         expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
             'glance_endpoint': fake_endpoint,
-            'image_id': 'fake_image_id'}
-        expected_wsgi_path = '/fake_path/v2/images/%s' % 'fake_image_id'
+            'image_id': fake_image_id}
+        expect_url_parts = urlparse(expected_url)
+        expected_wsgi_path = '/fake_path/v2/images/%s' % fake_image_id
+
+        expected_mgt_url = "%(glance_endpoint)s/v2/images/%(image_id)s" % {
+            'glance_endpoint': fake_endpoint,
+            'image_id': fake_image_id}
+        fake_mgt_parts = urlparse(expected_mgt_url)
+        fake_mgt_path = fake_mgt_parts[2]
 
         self.glance._upload_tarball_by_url_v2(
-            'fake_staging_path', 'fake_image_id', fake_endpoint,
+            'fake_staging_path', fake_image_id, fake_endpoint,
             fake_extra_headers, fake_properties)
 
-        self.assertTrue(mock_HTTPSConn.called)
-        self.assertTrue(mock_update_image_meta.called)
+        mock_update_image_meta.assert_called_with(fake_conn,
+                                                  fake_extra_headers,
+                                                  fake_properties,
+                                                  fake_mgt_path)
+        mock_HTTPSConn.assert_called_with(expect_url_parts[0],
+                                          expect_url_parts[1])
         mock_validate_image.assert_called_with(fake_conn,
                                                expected_url,
                                                fake_extra_headers,
@@ -406,17 +431,28 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_extra_headers = {}
         fake_properties = {}
         fake_endpoint = 'https://fake_netloc:fake_port'
+        fake_image_id = 'fake_image_id'
         expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
             'glance_endpoint': fake_endpoint,
-            'image_id': 'fake_image_id'}
-        expected_api_path = '/v2/images/%s' % 'fake_image_id'
+            'image_id': fake_image_id}
+        expect_url_parts = urlparse(expected_url)
+        expected_api_path = '/v2/images/%s' % fake_image_id
+
+        expected_mgt_url = "%(glance_endpoint)s/v2/images/%(image_id)s" % {
+            'glance_endpoint': fake_endpoint,
+            'image_id': fake_image_id}
+        fake_mgt_parts = urlparse(expected_mgt_url)
+        fake_mgt_path = fake_mgt_parts[2]
 
         self.glance._upload_tarball_by_url_v2(
-            'fake_staging_path', 'fake_image_id', fake_endpoint,
+            'fake_staging_path', fake_image_id, fake_endpoint,
             fake_extra_headers, fake_properties)
 
-        self.assertTrue(mock_Conn.called)
-        self.assertTrue(mock_update_image_meta.called)
+        mock_update_image_meta.assert_called_with(fake_conn,
+                                                  fake_extra_headers,
+                                                  fake_properties,
+                                                  fake_mgt_path)
+        mock_Conn.assert_called_with(expect_url_parts[0], expect_url_parts[1])
         mock_validate_image.assert_called_with(fake_conn,
                                                expected_url,
                                                fake_extra_headers,
@@ -444,17 +480,28 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_extra_headers = {}
         fake_properties = {}
         fake_endpoint = 'https://fake_netloc/fake_path'
+        fake_image_id = 'fake_image_id'
         expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
             'glance_endpoint': fake_endpoint,
-            'image_id': 'fake_image_id'}
-        expected_wsgi_path = '/fake_path/v2/images/%s' % 'fake_image_id'
+            'image_id': fake_image_id}
+        expect_url_parts = urlparse(expected_url)
+        expected_wsgi_path = '/fake_path/v2/images/%s' % fake_image_id
+
+        expected_mgt_url = "%(glance_endpoint)s/v2/images/%(image_id)s" % {
+            'glance_endpoint': fake_endpoint,
+            'image_id': fake_image_id}
+        fake_mgt_parts = urlparse(expected_mgt_url)
+        fake_mgt_path = fake_mgt_parts[2]
 
         self.glance._upload_tarball_by_url_v2(
-            'fake_staging_path', 'fake_image_id', fake_endpoint,
+            'fake_staging_path', fake_image_id, fake_endpoint,
             fake_extra_headers, fake_properties)
 
-        self.assertTrue(mock_Conn.called)
-        self.assertTrue(mock_update_image_meta.called)
+        mock_update_image_meta.assert_called_with(fake_conn,
+                                                  fake_extra_headers,
+                                                  fake_properties,
+                                                  fake_mgt_path)
+        mock_Conn.assert_called_with(expect_url_parts[0], expect_url_parts[1])
         mock_validate_image.assert_called_with(fake_conn,
                                                expected_url,
                                                fake_extra_headers,
@@ -482,17 +529,29 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         fake_extra_headers = {}
         fake_properties = {}
         fake_endpoint = 'https://fake_netloc/fake_path'
+        fake_image_id = 'fake_image_id'
         expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
             'glance_endpoint': fake_endpoint,
-            'image_id': 'fake_image_id'}
-        expected_wsgi_path = '/fake_path/v2/images/%s' % 'fake_image_id'
+            'image_id': fake_image_id}
+        expected_wsgi_path = '/fake_path/v2/images/%s' % fake_image_id
+
+        expected_mgt_url = "%(glance_endpoint)s/v2/images/%(image_id)s" % {
+            'glance_endpoint': fake_endpoint,
+            'image_id': fake_image_id}
+        expect_url_parts = urlparse(expected_url)
+        fake_mgt_parts = urlparse(expected_mgt_url)
+        fake_mgt_path = fake_mgt_parts[2]
 
         self.glance._upload_tarball_by_url_v2(
-            'fake_staging_path', 'fake_image_id', fake_endpoint,
+            'fake_staging_path', fake_image_id, fake_endpoint,
             fake_extra_headers, fake_properties)
 
-        self.assertTrue(mock_HTTPSConn.called)
-        self.assertTrue(mock_update_image_meta.called)
+        mock_update_image_meta.assert_called_with(fake_conn,
+                                                  fake_extra_headers,
+                                                  fake_properties,
+                                                  fake_mgt_path)
+        mock_HTTPSConn.assert_called_with(expect_url_parts[0],
+                                          expect_url_parts[1])
         mock_validate_image.assert_called_with(fake_conn,
                                                expected_url,
                                                fake_extra_headers,
