@@ -370,8 +370,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
         mgt_parts = urlparse(mgt_url)
         mgt_path = mgt_parts[2]
 
-        _update_image_meta_v2(conn, image_id, extra_headers, properties,
-                              mgt_path)
+        _update_image_meta_v2(conn, extra_headers, properties, mgt_path)
 
         validate_image_status_before_upload_v2(conn, url, extra_headers,
                                                mgt_path)
