@@ -138,7 +138,7 @@ function config_ovs_agent {
     # Configure q-domua, use Dom0's hostname and concat suffix
     local ssh_dom0=$(get_dom0_ssh)
     local dom0_hostname=`$ssh_dom0 "hostname"`
-    iniset $NEUTRON_CORE_PLUGIN_CONF.domU DEFAULT host "${dom0_hostname}-nova"
+    iniset $NEUTRON_CORE_PLUGIN_CONF.domU DEFAULT host "${dom0_hostname}"
 
     # Configure xenapi for q-domua to use its xenserver rootwrap daemon
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU xenapi connection_url "$XENAPI_CONNECTION_URL"
@@ -187,7 +187,7 @@ function config_nova_compute {
     # Configure nova-compute, use Dom0's hostname and concat suffix
     local ssh_dom0=$(get_dom0_ssh)
     local dom0_hostname=`$ssh_dom0 "hostname"`
-    iniset $NOVA_CONF DEFAULT host "${dom0_hostname}-nova"
+    iniset $NOVA_CONF DEFAULT host "${dom0_hostname}"
 }
 
 function config_ceilometer {
