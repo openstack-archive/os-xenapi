@@ -101,7 +101,8 @@ class SessionTestCase(base.TestCase):
         mock_gethostbyname.assert_called_with(fake_ip)
         self.assertEqual('fake_host_ref', xenapi_sess.host_ref)
         self.assertEqual('fake_host_uuid', xenapi_sess.host_uuid)
-        self.assertEqual('http://fake_master_url', xenapi_sess.url)
+        self.assertEqual('http://fake_master_url', xenapi_sess.master_url)
+        self.assertEqual(fake_url, xenapi_sess.url)
 
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')
@@ -142,7 +143,8 @@ class SessionTestCase(base.TestCase):
         mock_gethostbyname.assert_called_with(fake_host_name)
         self.assertEqual('fake_host_ref', xenapi_sess.host_ref)
         self.assertEqual('fake_host_uuid', xenapi_sess.host_uuid)
-        self.assertEqual('http://fake_master_url', xenapi_sess.url)
+        self.assertEqual('http://fake_master_url', xenapi_sess.master_url)
+        self.assertEqual(fake_url, xenapi_sess.url)
 
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     @mock.patch.object(session.XenAPISession, '_get_platform_version')

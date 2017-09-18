@@ -88,8 +88,9 @@ class XenAPISession(object):
         self.host_checked = False
         self.is_slave = False
         self.ip = self._get_ip_from_url(url)
-        self.url = self._create_first_session(url, user, pw)
-        self._populate_session_pool(self.url, user, pw)
+        self.url = url
+        self.master_url = self._create_first_session(url, user, pw)
+        self._populate_session_pool(self.master_url, user, pw)
         self.host_ref = self._get_host_ref(self.ip)
         self.host_uuid = self._get_host_uuid()
         self.product_version, self.product_brand = \
