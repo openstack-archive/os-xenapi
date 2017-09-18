@@ -88,6 +88,7 @@ class XenAPISession(object):
         self.host_checked = False
         self.is_slave = False
         self.ip = self._get_ip_from_url(url)
+        self.local_url = url
         self.url = self._create_first_session(url, user, pw)
         self._populate_session_pool(self.url, user, pw)
         self.host_ref = self._get_host_ref(self.ip)
@@ -362,8 +363,8 @@ class XenAPISession(object):
     def http_connection(self):
         conn = None
 
-        xs_url = urllib.parse.urlparse(self.url)
-        LOG.debug("Creating http(s) connection to %s", self.url)
+        xs_url = urllib.parse.urlparse(self.local_url)
+        LOG.debug("Creating http(s) connection to %s", self.local_url)
         if xs_url.scheme == 'http':
             conn = http_client.HTTPConnection(xs_url.netloc)
         elif xs_url.scheme == 'https':
