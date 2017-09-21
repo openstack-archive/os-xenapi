@@ -14,7 +14,21 @@ hypervisor, such as Citrix's XenServer.
 Features
 --------
 
-* TODO
+The following features are supported since 0.3.1:
+
+* VDI streaming
+  It will allow the libary user to create XenServer VDI from a gzipped
+  image data stream; or create image data stream from a specified
+  XenServer VDI. By comparing to the existing dom0 glance plugin,
+  the image data is processed by using pipe steams. It won't create
+  intermediate files and completely use the formal VDI import or export
+  APIs.
+
+* XAPI pool
+  With this feature, we can deploy OpenStack on hosts which belongs a
+  XAPI pool, so that it can get the benefits from XAPI pool features:
+  e.g. it's able to live migrate instance between two hosts without
+  moving the disk on shared storage.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Install Devstack on XenServer
