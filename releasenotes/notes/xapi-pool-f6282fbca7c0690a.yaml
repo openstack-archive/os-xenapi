@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The os-xenapi libary now supports XAPI pool. We can deploy OpenStack on
+    hosts which belong to a XAPI pool, so that we can get the benefits from
+    XAPI pool features: e.g. it's able to live migrate between two hosts
+    without moving the disk on shared storage.
