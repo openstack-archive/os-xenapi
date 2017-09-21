@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The os-xenapi library now supports the VDI streaming feature which will
+    allow the libary user to create XenServer VDI from a gzipped image data
+    stream; or create image data stream from a specified XenServer VDI.
+
+    By comparing to the existing dom0 glance plugin, the image data is
+    processed by using pipe steams. It won't create intermediate files and
+    completely use the formal VDI import or export APIs.
