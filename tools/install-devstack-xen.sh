@@ -530,7 +530,7 @@ ENABLED_SERVICES+=,neutron,q-domua
 LOCALCONF_CONTENT_ENDS_HERE
 else
 cat << LOCALCONF_CONTENT_ENDS_HERE >> local.conf
-ENABLED_SERVICES=neutron,q-agt,q-domua,n-cpu,placement-client,dstat
+ENABLED_SERVICES=neutron,q-agt,q-domua,n-cpu,placement-client,dstat,n-novnc
 SERVICE_HOST=$CONTROLLER_IP
 MYSQL_HOST=$CONTROLLER_IP
 GLANCE_HOST=$CONTROLLER_IP
