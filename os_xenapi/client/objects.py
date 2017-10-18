@@ -154,3 +154,27 @@ class Task(XenAPISessionObject):
     """XAPI task."""
     def __init__(self, session):
         super(Task, self).__init__(session, "task")
+
+
+class GPU_group(XenAPISessionObject):
+    """A group of compatible GPUs across the resource pool"""
+    def __init__(self, session):
+        super(GPU_group, self).__init__(session, "GPU_group")
+
+
+class PGPU(XenAPISessionObject):
+    """A physical GPU (pGPU)"""
+    def __init__(self, session):
+        super(PGPU, self).__init__(session, "PGPU")
+
+
+class VGPU(XenAPISessionObject):
+    """A virtual GPU (vGPU)"""
+    def __init__(self, session):
+        super(VGPU, self).__init__(session, "VGPU")
+
+
+class VGPU_type(XenAPISessionObject):
+    """A type of virtual GPU"""
+    def __init__(self, session):
+        super(VGPU_type, self).__init__(session, "VGPU_type")
