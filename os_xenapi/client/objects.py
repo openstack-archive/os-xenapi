@@ -154,3 +154,81 @@ class Task(XenAPISessionObject):
     """XAPI task."""
     def __init__(self, session):
         super(Task, self).__init__(session, "task")
+
+
+class GPU_group(XenAPISessionObject):
+    """A group of compatible GPUs across the resource pool"""
+    def __init__(self, session):
+        super(GPU_group, self).__init__(session, "GPU_group")
+
+
+class PGPU(XenAPISessionObject):
+    """A physical GPU (pGPU)"""
+    def __init__(self, session):
+        super(PGPU, self).__init__(session, "PGPU")
+
+
+class VGPU(XenAPISessionObject):
+    """A virtual GPU (vGPU)"""
+    def __init__(self, session):
+        super(VGPU, self).__init__(session, "VGPU")
+
+
+class VGPU_type(XenAPISessionObject):
+    """A type of virtual GPU"""
+    def __init__(self, session):
+        super(VGPU_type, self).__init__(session, "VGPU_type")
+
+
+class Console(XenAPISessionObject):
+    """A console"""
+    def __init__(self, session):
+        super(Console, self).__init__(session, "console")
+
+
+class Host_metrics(XenAPISessionObject):
+    """The metrics associated with a host"""
+    def __init__(self, session):
+        super(Host_metrics, self).__init__(session, "host_metrics")
+
+
+class PCI(XenAPISessionObject):
+    """A PCI"""
+    def __init__(self, session):
+        super(PCI, self).__init__(session, "PCI")
+
+
+class PIF_metrics(XenAPISessionObject):
+    """The metrics associated with a PIF"""
+    def __init__(self, session):
+        super(PIF_metrics, self).__init__(session, "PIF_metrics")
+
+
+class Pool_update(XenAPISessionObject):
+    """Pool-wide updates to the host software"""
+    def __init__(self, session):
+        super(Pool_update, self).__init__(session, "pool_update")
+
+
+class Role(XenAPISessionObject):
+    """A set of permissions associated with a subject"""
+    def __init__(self, session):
+        super(Role, self).__init__(session, "role")
+
+
+class SDN_controller(XenAPISessionObject):
+    """the SDN controller that is to connect with the pool"""
+    def __init__(self, session):
+        super(SDN_controller, self).__init__(session, "SDN_controller")
+
+
+class SM(XenAPISessionObject):
+    """A storage manager plugin"""
+    def __init__(self, session):
+        super(SM, self).__init__(session, "SM")
+
+
+class Secret(XenAPISessionObject):
+    """A secret"""
+    def __init__(self, session):
+        super(Secret, self).__init__(session, "secret")
