@@ -147,9 +147,6 @@ function config_ovs_agent {
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU agent root_helper ""
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU agent root_helper_daemon "xenapi_root_helper"
 
-    # TODO(huanxie): Enable minimized polling now bug 1495423 is fixed
-    iniset $NEUTRON_CORE_PLUGIN_CONF.domU agent minimize_polling False
-
     # Set integration bridge for ovs-agent in compute node (q-domua)
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs integration_bridge $OVS_BRIDGE
 
