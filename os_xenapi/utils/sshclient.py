@@ -1,0 +1,79 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+"""SSH client.
+
+This defines a class for SSH client which can be used to scp files to
+remote hosts or execute commands in remote hosts.
+"""
+
+import paramiko
+
+from os_xenapi.client.exception import OsXenApiException
+from os_xenapi.client.i18n import _
+
+
+class SshExecCmdFailure(OsXenApiException):
+    msg_fmt = _("Failed to %(action)s\n"
+                "command: %(command)s\n"
+                "stdout: %(stdout)s\n"
+                "stderr: %(stderr)s")
+
+
+class SSHClient(object):
+    def __init__(self, ip, username, password=None, pkey=None,
+                 key_filename=None, log=None, look_for_keys=False,
+                 allow_agent=False):
+        self.client = paramiko.SSHClient()
+        self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
+        self.client.connect(ip, username=username, password=password,
+                            pkey=pkey, key_filename=key_filename,
+                            look_for_keys=look_for_keys,
+                            allow_agent=allow_agent)
+        self.log = log
+
+    def __del__(self):
+        self.client.close()
+
+    def ssh(self, action, command, get_pty=True, output=False):
+        if self.log:
+            self.log.debug("*** START to %s" % action)
+            self.log.debug("executing: %s" % command)
+        stdin, stdout, stderr = self.client.exec_command(
+            command, get_pty=get_pty)
+        out = ''
+        err = ''
+        for line in stdout:
+            if output:
+                out += line
+            if self.log:
+                self.log.info(line.rstrip())
+        for line in stderr:
+            if output:
+                err += line
+            if self.log:
+                self.log.error(line.rstrip())
+        ret = stdout.channel.recv_exit_status()
+        if ret:
+            if self.log:
+                self.log.debug("*** FAILED to %s (%s)" % (action, ret))
+            raise SshExecCmdFailure(action=action, command=command,
+                                    stdout=out, stderr=err)
+        if self.log:
+            self.log.debug("*** SUCCESSFULLY %s" % action)
+        return out, err
+
+    def scp(self, source, dest):
+        if self.log:
+            self.log.info("Copy %s -> %s" % (source, dest))
+        sftp = self.client.open_sftp()
+        sftp.put(source, dest)
+        sftp.close()
