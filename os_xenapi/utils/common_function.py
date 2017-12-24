@@ -72,6 +72,11 @@ def execute(*cmd, **kwargs):
     return out
 
 
+def get_eth_ipaddr(eth):
+    # return eth's IP address.
+    return netifaces.ifaddresses(eth).get(netifaces.AF_INET)[0]['addr']
+
+
 def get_eth_mac(eth):
     # Get eth's mac address.
     return netifaces.ifaddresses(eth).get(netifaces.AF_LINK)[0]['addr']
