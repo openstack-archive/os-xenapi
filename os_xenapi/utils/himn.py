@@ -72,11 +72,11 @@ def persist_eth_cfg(eth, bootproto='dhcp', defroute='no', onboot='yes'):
     # Persist eth configure into ifcfg-eth file.
     ifcfg_file = '/etc/sysconfig/network-scripts/ifcfg-%s' % eth
     with open(ifcfg_file, 'w') as ifcfg:
-        ifcfg.write('DEVICE="%s\n"' % eth)
-        ifcfg.write('IPV6INIT="no"')
-        ifcfg.write('BOOTPROTO="%s\n"' % bootproto)
-        ifcfg.write('DEFROUTE="%s\n"' % defroute)
-        ifcfg.write('ONBOOT="%s\n"' % onboot)
+        ifcfg.write('DEVICE="%s"\n' % eth)
+        ifcfg.write('IPV6INIT="no"\n')
+        ifcfg.write('BOOTPROTO="%s"\n' % bootproto)
+        ifcfg.write('DEFROUTE="%s"\n' % defroute)
+        ifcfg.write('ONBOOT="%s"\n' % onboot)
 
 
 def config_himn(himn_dom0_ip):
