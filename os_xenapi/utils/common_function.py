@@ -62,7 +62,7 @@ def detailed_execute(*cmd, **kwargs):
                      proc.returncode)
         else:
             LOG.warn('proc.returncode: %s', proc.returncode)
-            raise exception(err)
+            raise exception.ExecuteCommandFailed(cmd)
 
     return proc.returncode, out, err
 
