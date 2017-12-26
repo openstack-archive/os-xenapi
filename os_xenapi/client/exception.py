@@ -90,3 +90,4 @@ class ExecuteCommandFailed(OsXenApiException):
 
 class GetInterfaceOnHIMNMacError(OsXenApiException):
     msg_fmt = _("Cannot find eth matches mac: mac=(%(mac)s)")
+
