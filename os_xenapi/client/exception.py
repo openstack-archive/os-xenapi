@@ -77,3 +77,19 @@ class VdiImportFailure(OsXenApiException):
 
 class VhdDiskTypeNotSupported(OsXenApiException):
     msg_fmt = _("Not supported VHD disk type: type=(%(disk_type)s)")
+
+
+class SSHClientInvalid(OsXenApiException):
+    msg_fmt = _("Client is invalid")
+
+
+class NoNetworkInterfaceWithIp(OsXenApiException):
+    msg_fmt = _("Can't find network interface: ip=(%(ip)s) ")
+
+
+class MissingRequiredArguments(OsXenApiException):
+    msg_fmt = _("Required arguments is missing")
+
+
+class ExecuteCommandFailed(OsXenApiException):
+    msg_fmt = _("Execute command failed: cmd=(%(cmd)s)")
