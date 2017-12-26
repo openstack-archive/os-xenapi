@@ -1,0 +1,9 @@
+Code-Review+1: Naichuan Sun <naichuan.sun@citrix.com>
+Code-Review+2: Huan Xie <huan.xie@citrix.com>
+Workflow+1: Huan Xie <huan.xie@citrix.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 26 Dec 2017 07:09:44 +0000
+Reviewed-on: https://review.openstack.org/529992
+Project: openstack/os-xenapi
+Branch: refs/heads/master
