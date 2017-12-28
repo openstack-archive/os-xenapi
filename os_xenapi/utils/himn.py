@@ -34,7 +34,7 @@ def get_local_himn_eth_via_xenstore():
     eths = [eth for eth in netifaces.interfaces()
             if common_function.get_eth_mac(eth) == himn_mac]
     if len(eths) != 1:
-        raise exception('Cannot find eth matches himn_mac')
+        raise exception.NoNetworkInterfaceWithMac(himn_mac)
 
     return eths[0]
 
@@ -84,7 +84,7 @@ def config_himn(himn_dom0_ip):
     # populate the ifcfg file for HIMN interface, so that it will always get ip
     # in the future.
     if not eth:
-        raise exception("can't find eth on %s" % himn_dom0_ip)
+        raise exception.NoNetworkInterfaceWithIp(himn_dom0_ip)
     persist_eth_cfg(eth)
     # Force a restart on this interface by using the configure file.
     # It will ensure the interface up and refresh IP via DHCP.
@@ -92,6 +92,7 @@ def config_himn(himn_dom0_ip):
     common_function.execute('ifconfig', eth, 'up')
     common_function.execute('ifdown', eth)
     common_function.execute('ifup', eth)
+
 
 if __name__ == '__main__':
     config_himn(sys.argv[1])
