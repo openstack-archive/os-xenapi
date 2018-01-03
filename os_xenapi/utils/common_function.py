@@ -29,6 +29,12 @@ LOG = logging.getLogger('XenAPI_utils')
 
 def detailed_execute(*cmd, **kwargs):
     cmd = map(str, cmd)
+    stdin = kwargs.get('stdin')
+    if not stdin:
+        stdin = subprocess.PIPE
+    hold_flag = kwargs.get('hold')
+    if not hold_flag:
+        hold_flag = 'false'
     _env = kwargs.get('env')
     env_prefix = ''
     if _env:
@@ -39,12 +45,22 @@ def detailed_execute(*cmd, **kwargs):
     else:
         env = None
     LOG.info(env_prefix + ' '.join(cmd))
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,  # nosec
+    proc = subprocess.Popen(cmd, stdin=stdin,  # nosec
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, env=env)
 
+    if proc.returncode is not None and proc.returncode != 0:
+        if proc.returncode in kwargs.get('allowed_return_codes', [0]):
+            LOG.info('Swallowed acceptable return code of %d',
+                     proc.returncode)
+        else:
+            LOG.warn('proc.returncode: %s', proc.returncode)
+            raise exception.ExecuteCommandFailed(cmd)
+
     prompt = kwargs.get('prompt')
-    if prompt:
+    if hold_flag == 'true':
+        return proc
+    elif prompt:
         (out, err) = proc.communicate(prompt)
     else:
         (out, err) = proc.communicate()
@@ -56,25 +72,12 @@ def detailed_execute(*cmd, **kwargs):
     if err:
         LOG.info(err)
 
-    if proc.returncode is not None and proc.returncode != 0:
-        if proc.returncode in kwargs.get('allowed_return_codes', [0]):
-            LOG.info('Swallowed acceptable return code of %d',
-                     proc.returncode)
-        else:
-            LOG.warn('proc.returncode: %s', proc.returncode)
-            raise exception(err)
-
-    return proc.returncode, out, err
+    return proc, out, err
 
 
 def execute(*cmd, **kwargs):
     _, out, _ = detailed_execute(*cmd, **kwargs)
     return out
-
-
-def get_eth_ipaddr(eth):
-    # return eth's IP address.
-    return netifaces.ifaddresses(eth).get(netifaces.AF_INET)[0]['addr']
 
 
 def get_eth_mac(eth):
