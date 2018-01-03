@@ -16,11 +16,13 @@
 
 It contains the common functions used by XenAPI utils."""
 
+import inspect
 import ipaddress
 import logging
 import netifaces
 import os
 import subprocess
+import tempfile
 
 from os_xenapi.client import exception
 
@@ -110,3 +112,30 @@ def get_host_ipv4s(host_client):
             ipv4s.append(ipv4)
 
     return ipv4s
+
+
+def setup_logging(filename=DEFAULT_LOG_FILE, folder=LOG_ROOT,
+                  log_level=logging.WARNING):
+    log_file = os.path.join(folder, filename)
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    logging.basicConfig(
+        filename=log_file, level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+
+
+def scp_and_execute(dom0_client, script_name):
+    # copy script to remote host and execute it
+    TMP_SH_DIR = dom0_client.ssh("mktemp -d /tmp/domu_sh.XXXXXX", output=True)
+    TMP_SH_PATH = TMP_SH_DIR + script_name
+    Util_DIR = os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe())))
+    SH_TOOLS_DIR = Util_DIR + '/sh_tools/'
+    dom0_client.ssh("mkdir -p " + TMP_SH_DIR)
+    dom0_client.scp(SH_TOOLS_DIR + script_name, TMP_SH_PATH)
+    dom0_client.ssh("chmod +x " + TMP_SH_PATH)
+
+    dom0_client.ssh(TMP_SH_PATH)
+    dom0_client.ssh("rm -rf " + TMP_SH_DIR)
