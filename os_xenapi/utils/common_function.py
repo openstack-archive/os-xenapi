@@ -16,6 +16,7 @@
 
 It contains the common functions used by XenAPI utils."""
 
+import inspect
 import ipaddress
 import logging
 import netifaces
@@ -124,3 +125,18 @@ def setup_logging(filename=DEFAULT_LOG_FILE, folder=LOG_ROOT,
     logging.basicConfig(
         filename=log_file, level=log_level,
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+
+
+def scp_and_execute(dom0_client, script_name):
+    # copy script to remote host and execute it
+    TMP_SH_DIR = "/tmp/remote_sh/"
+    Util_DIR = os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe())))
+    SH_TOOLS_DIR = Util_DIR + '/sh_tools/'
+    dom0_client.ssh("mkdir -p " + TMP_SH_DIR)
+    dom0_client.scp(SH_TOOLS_DIR + script_name,
+                    TMP_SH_DIR + script_name)
+    dom0_client.ssh("chmod +x " + TMP_SH_DIR + script_name)
+
+    dom0_client.ssh(TMP_SH_DIR + script_name)
+    dom0_client.ssh("rm -rf " + TMP_SH_DIR)
