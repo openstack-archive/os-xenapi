@@ -77,3 +77,16 @@ class VdiImportFailure(OsXenApiException):
 
 class VhdDiskTypeNotSupported(OsXenApiException):
     msg_fmt = _("Not supported VHD disk type: type=(%(disk_type)s)")
+
+
+class NoNetworkInterfaceInSameSegment(OsXenApiException):
+    msg_fmt = _("Can't find network interface in the same network as \
+                ip=(%(ip)s)")
+
+
+class ExecuteCommandFailed(OsXenApiException):
+    msg_fmt = _("Execute command failed: cmd=(%(cmd)s)")
+
+
+class GetInterfaceOnHIMNMacError(OsXenApiException):
+    msg_fmt = _("Cannot find eth matches mac: mac=(%(mac)s)")
