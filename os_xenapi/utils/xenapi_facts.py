@@ -25,28 +25,39 @@ from os_xenapi.utils import himn
 from os_xenapi.utils import sshclient
 
 
-def get_hostname(host_client):
-    out, _ = host_client.ssh('hostname')
-    hostname = out.strip()
-    return hostname
+def get_xenapi_facts(dom0_client):
+    """Get XenAPI facts
 
+    This function will get XenAPI relative facts on the compute node:
+    dom0_hostname: dom0's hostname.
+    domu_himn_eth: domU's network interface which is connected to HIMN
+    domu_himn_ip: domU's ip which belong to the subnt reserved for HIMN
 
-def get_facts(dom0_himn_ip, user_name, passwd):
+    :param dom0_client: the remote access client connected to dom0
+    :returns: a dict which contains all facts gathered.
+    """
+
     facts = {}
 
-    dom0_client = sshclient.SSHClient(dom0_himn_ip, user_name, passwd)
+    # get dom0's hostname
+    facts['dom0_hostname'] = common_function.get_remote_hostname(dom0_client)
 
-    facts['hostname'] = get_hostname(dom0_client)
-
-    # get local HIMN info
-    eth = himn.get_local_himn_eth(dom0_himn_ip)
+    # get domU's eth and ip which are connected to HIMN.
+    eth = himn.get_local_himn_eth(dom0_client.ip)
     ip_addr = common_function.get_eth_ipaddr(eth)
-    facts['local_himn_eth'] = eth
-    facts['local_himn_ip'] = ip_addr
+    facts['domu_himn_eth'] = eth
+    facts['domu_himn_ip'] = ip_addr
 
-    return json.dumps(facts)
+    return facts
+
 
 if __name__ == '__main__':
+    # Run in domU which has an interface connected to HIMN
+    # argv[1]: dom0's IP address
+    # argv[2]: user name
+    # argv[3]: user passwd
     dom0_himn_ip, user_name, passwd = sys.argv[1:]
-    facts_json = get_facts(dom0_himn_ip, user_name, passwd)
-    print('get_facts returns:\n %s' % facts_json)
+    ssh_client = sshclient.SSHClient(sys.argv[1], sys.argv[2], sys.argv[3])
+    xenapi_facts = get_xenapi_facts(ssh_client)
+    print('Got XenAPI facts as:\n%s' % json.dumps(xenapi_facts, indent=4,
+                                                  sort_keys=True))
