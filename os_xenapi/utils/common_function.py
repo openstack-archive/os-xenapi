@@ -80,3 +80,10 @@ def get_eth_ipaddr(eth):
 def get_eth_mac(eth):
     # Get eth's mac address.
     return netifaces.ifaddresses(eth).get(netifaces.AF_LINK)[0]['addr']
+
+
+def get_remote_hostname(host_client):
+    # Get remote host's hostname via the host_client connected to the host.
+    out, _ = host_client.ssh('hostname')
+    hostname = out.strip()
+    return hostname
