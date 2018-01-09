@@ -41,6 +41,8 @@ def get_xenapi_facts(dom0_client):
 
     # get dom0's hostname
     facts['dom0_hostname'] = common_function.get_remote_hostname(dom0_client)
+    # get dom0's IPs
+    facts['dom0_ipv4s'] = common_function.get_host_ipv4s(dom0_client)
 
     # get domU's eth and ip which are connected to HIMN.
     eth = himn.get_local_himn_eth(dom0_client.ip)
