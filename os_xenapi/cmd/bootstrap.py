@@ -19,14 +19,20 @@ a good state to proceed for further OpenStack deployment."""
 
 import getopt
 import json
+import logging
 import sys
 
 from os_xenapi.utils.common_conf import enable_linux_bridge
+from os_xenapi.utils.common_function import setup_logging
 from os_xenapi.utils.himn import config_himn
 from os_xenapi.utils.iptables import config_iptables
 from os_xenapi.utils.sshclient import SSHClient
 from os_xenapi.utils.xapi_plugin import install_plugins_to_dom0
 from os_xenapi.utils.xenapi_facts import get_xenapi_facts
+
+setup_logging("bootstrap")
+LOG = logging.getLogger('bootstrap')
+LOG.setLevel(logging.DEBUG)
 
 USAGE_MSG = "Run the following command to bootstrap the XenAPI compute node:\n"
 USAGE_MSG += sys.argv[0]
@@ -96,6 +102,7 @@ def main():
     dom0_client = SSHClient(himn_ip, user_name, passwd)
 
     # Invoke functions to do needed boostrap tasks.
+    LOG.info("Launch bootstrap task")
     config_himn(himn_ip)
     config_iptables(dom0_client)
     install_plugins_to_dom0(dom0_client)

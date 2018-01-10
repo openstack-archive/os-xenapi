@@ -10,7 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 import mock
+import os
 
 from os_xenapi.tests import base
 from os_xenapi.utils import common_function
@@ -56,3 +58,36 @@ class CommonUtilFuncTestCase(base.TestCase):
 
         self.assertEqual(ipv4s, expect)
         mock_client.ssh.assert_called()
+
+    @mock.patch.object(logging, 'basicConfig')
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(os, 'mkdir')
+    def test_setup_logging(self, mock_mkdir, mock_exists, fake_log_conf):
+        expect_log_file = 'fake_folder/fake_file'
+        mock_exists.return_value = True
+
+        common_function.setup_logging('fake_file', 'fake_folder/',
+                                      'fake_debug_level')
+
+        fake_log_conf.assert_called_once_with(
+            filename=expect_log_file, level='fake_debug_level',
+            format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        mock_mkdir.assert_not_called()
+        mock_exists.assert_called_once_with('fake_folder/')
+
+    @mock.patch.object(logging, 'basicConfig')
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(os, 'mkdir')
+    def test_setup_logging_create_path(self, mock_mkdir, mock_exists,
+                                       fake_log_conf):
+        expect_log_file = 'fake_folder/fake_file'
+        mock_exists.return_value = False
+
+        common_function.setup_logging('fake_file', 'fake_folder/',
+                                      'fake_debug_level')
+
+        fake_log_conf.assert_called_once_with(
+            filename=expect_log_file, level='fake_debug_level',
+            format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        mock_mkdir.assert_called_once_with('fake_folder/')
+        mock_exists.assert_called_once_with('fake_folder/')
