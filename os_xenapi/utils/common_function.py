@@ -24,6 +24,7 @@ import subprocess
 from os_xenapi.client import exception
 
 
+LOG_ROOT = '/var/log/XenAPI_utils'
 LOG = logging.getLogger('XenAPI_utils')
 
 
@@ -87,3 +88,14 @@ def get_remote_hostname(host_client):
     out, _ = host_client.ssh('hostname')
     hostname = out.strip()
     return hostname
+
+
+def setup_logging(filename, folder=LOG_ROOT, log_level=logging.WARNING):
+    log_file = os.path.join(folder, filename)
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    logging.basicConfig(
+        filename=log_file, level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
