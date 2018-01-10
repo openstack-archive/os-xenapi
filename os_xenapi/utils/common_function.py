@@ -24,11 +24,13 @@ import subprocess
 
 from os_xenapi.client import exception
 
-
-LOG = logging.getLogger('XenAPI_utils')
+LOG_ROOT = '/var/log/os-xenapi'
+DEFAULT_LOG_FILE = 'xenapi_log'
 
 
 def detailed_execute(*cmd, **kwargs):
+    setup_logging('XenAPI_utils')
+    LOG = logging.getLogger('XenAPI_utils')
     cmd = map(str, cmd)
     _env = kwargs.get('env')
     env_prefix = ''
@@ -110,3 +112,15 @@ def get_host_ipv4s(host_client):
             ipv4s.append(ipv4)
 
     return ipv4s
+
+
+def setup_logging(filename=DEFAULT_LOG_FILE, folder=LOG_ROOT,
+                  log_level=logging.WARNING):
+    log_file = os.path.join(folder, filename)
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    logging.basicConfig(
+        filename=log_file, level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
