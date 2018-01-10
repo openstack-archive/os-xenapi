@@ -19,9 +19,11 @@ a good state to proceed for further OpenStack deployment."""
 
 import getopt
 import json
+import logging
 import sys
 
 from os_xenapi.utils.common_conf import enable_linux_bridge
+from os_xenapi.utils.common_function import setup_logging
 from os_xenapi.utils.himn import config_himn
 from os_xenapi.utils.iptables import config_iptables
 from os_xenapi.utils.sshclient import SSHClient
@@ -86,6 +88,9 @@ def _parse_args(argv):
 
 
 def main():
+    setup_logging('bootstrap')
+    LOG = logging.getLogger('bootstrap')
+    LOG.setLevel(logging.DEBUG)
     opt_values = _parse_args(sys.argv)
 
     himn_ip = opt_values['himn-ip']
@@ -96,6 +101,7 @@ def main():
     dom0_client = SSHClient(himn_ip, user_name, passwd)
 
     # Invoke functions to do needed boostrap tasks.
+    LOG.info("Launch bootstrap task")
     config_himn(himn_ip)
     config_iptables(dom0_client)
     install_plugins_to_dom0(dom0_client)

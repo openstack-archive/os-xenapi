@@ -9,8 +9,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+import logging
 import mock
+import os
 
 from os_xenapi.cmd import bootstrap
 from os_xenapi.tests import base
@@ -76,13 +77,20 @@ class GetXenapiFactsTestCase(base.TestCase):
     @mock.patch.object(bootstrap, 'install_plugins_to_dom0')
     @mock.patch.object(bootstrap, 'get_and_store_facts')
     @mock.patch.object(bootstrap, 'enable_linux_bridge')
-    def test_bootstrap(self, mock_enable_lbr, mock_facts, mock_plugin,
-                       mock_iptables, mock_himn, mock_client, mock_parse):
+    @mock.patch.object(os, 'mkdir')
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(logging, 'basicConfig')
+    def test_bootstrap(self, mock_basicLogConfig, mock_exists, mock_mkdir,
+                       mock_enable_lbr, mock_facts, mock_plugin, mock_iptables,
+                       mock_himn, mock_client, mock_parse):
         fake_opts = {'himn-ip': '169.254.0.1',
                      'passwd': 'passwd',
                      'user-name': 'root'}
         mock_parse.return_value = fake_opts
         mock_client.return_value = mock.sentinel.sshclient
+        mock_exists.return_value = False
+        expect_log_folder = "/var/log/os-xenapi"
+        expect_log_file = "/var/log/os-xenapi/bootstrap"
 
         bootstrap.main()
 
@@ -93,3 +101,8 @@ class GetXenapiFactsTestCase(base.TestCase):
         mock_facts.assert_called_with(mock.sentinel.sshclient,
                                       bootstrap.DEF_XENAPI_FACTS_FILE)
         mock_enable_lbr.assert_called_with(mock.sentinel.sshclient)
+        mock_basicLogConfig.assert_called_once_with(
+            filename=expect_log_file, level=logging.WARNING,
+            format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        mock_exists.assert_called_once_with(expect_log_folder)
+        mock_mkdir.assert_called_once_with(expect_log_folder)
