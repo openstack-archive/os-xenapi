@@ -9,7 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+import logging
 import mock
 
 from os_xenapi.cmd import bootstrap
@@ -76,8 +76,10 @@ class GetXenapiFactsTestCase(base.TestCase):
     @mock.patch.object(bootstrap, 'install_plugins_to_dom0')
     @mock.patch.object(bootstrap, 'get_and_store_facts')
     @mock.patch.object(bootstrap, 'enable_linux_bridge')
-    def test_bootstrap(self, mock_enable_lbr, mock_facts, mock_plugin,
-                       mock_iptables, mock_himn, mock_client, mock_parse):
+    @mock.patch.object(bootstrap, 'setup_logging')
+    def test_bootstrap(self, mock_setup_logging, mock_enable_lbr, mock_facts,
+                       mock_plugin, mock_iptables, mock_himn, mock_client,
+                       mock_parse):
         fake_opts = {'himn-ip': '169.254.0.1',
                      'passwd': 'passwd',
                      'user-name': 'root'}
@@ -93,3 +95,4 @@ class GetXenapiFactsTestCase(base.TestCase):
         mock_facts.assert_called_with(mock.sentinel.sshclient,
                                       bootstrap.DEF_XENAPI_FACTS_FILE)
         mock_enable_lbr.assert_called_with(mock.sentinel.sshclient)
+        mock_setup_logging.assert_called_once_with(log_level=logging.DEBUG)

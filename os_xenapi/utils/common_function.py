@@ -30,6 +30,8 @@ from os_xenapi.client import exception
 PATTERN_XENSTORE_VIFS_IN_VM = '/xapi/%s/private/vif'
 
 
+LOG_ROOT = '/var/log/os-xenapi'
+DEFAULT_LOG_FILE = 'xenapi.log'
 LOG = logging.getLogger('XenAPI_utils')
 
 
@@ -191,3 +193,15 @@ def scp_and_execute(dom0_client, script_name):
         dom0_client.ssh(TMP_SH_PATH)
     finally:
         dom0_client.ssh("rm -rf " + TMP_SH_DIR)
+
+
+def setup_logging(filename=DEFAULT_LOG_FILE, folder=LOG_ROOT,
+                  log_level=logging.WARNING):
+    log_file = os.path.join(folder, filename)
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    logging.basicConfig(
+        filename=log_file, level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
