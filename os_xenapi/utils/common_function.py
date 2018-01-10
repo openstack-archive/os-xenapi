@@ -24,22 +24,18 @@ import subprocess
 
 from os_xenapi.client import exception
 
-
-LOG = logging.getLogger('XenAPI_utils')
+LOG_ROOT = '/var/log/os-xenapi'
+DEFAULT_LOG_FILE = 'xenapi_log'
 
 
 def detailed_execute(*cmd, **kwargs):
     cmd = map(str, cmd)
     _env = kwargs.get('env')
-    env_prefix = ''
     if _env:
-        env_prefix = ''.join(['%s=%s ' % (k, _env[k]) for k in _env])
-
         env = dict(os.environ)
         env.update(_env)
     else:
         env = None
-    LOG.info(env_prefix + ' '.join(cmd))
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,  # nosec
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, env=env)
@@ -53,16 +49,9 @@ def detailed_execute(*cmd, **kwargs):
     if out:
         # Truncate "\n" if it is the last char
         out = out.strip()
-        LOG.debug(out)
-    if err:
-        LOG.info(err)
 
     if proc.returncode is not None and proc.returncode != 0:
-        if proc.returncode in kwargs.get('allowed_return_codes', [0]):
-            LOG.info('Swallowed acceptable return code of %d',
-                     proc.returncode)
-        else:
-            LOG.warn('proc.returncode: %s', proc.returncode)
+        if proc.returncode not in kwargs.get('allowed_return_codes', [0]):
             raise exception.ExecuteCommandFailed(cmd)
 
     return proc.returncode, out, err
@@ -110,3 +99,15 @@ def get_host_ipv4s(host_client):
             ipv4s.append(ipv4)
 
     return ipv4s
+
+
+def setup_logging(filename=DEFAULT_LOG_FILE, folder=LOG_ROOT,
+                  log_level=logging.WARNING):
+    log_file = os.path.join(folder, filename)
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    logging.basicConfig(
+        filename=log_file, level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
