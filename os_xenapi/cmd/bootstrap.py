@@ -21,6 +21,7 @@ import getopt
 import json
 import sys
 
+from os_xenapi.utils.common_conf import enable_linux_bridge
 from os_xenapi.utils.himn import config_himn
 from os_xenapi.utils.iptables import config_iptables
 from os_xenapi.utils.sshclient import SSHClient
@@ -98,6 +99,7 @@ def main():
     config_himn(himn_ip)
     config_iptables(dom0_client)
     install_plugins_to_dom0(dom0_client)
+    enable_linux_bridge(dom0_client)
 
     # Gather XenAPI relative facts and save them into file.
     get_and_store_facts(dom0_client, facts_file)
