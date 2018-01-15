@@ -14,11 +14,13 @@
 This defines a class for SSH client which can be used to scp files to
 remote hosts or execute commands in remote hosts.
 """
-
+import logging
 import paramiko
 
 from os_xenapi.client.exception import OsXenApiException
 from os_xenapi.client.i18n import _
+
+LOG = logging.getLogger('SSHClient')
 
 
 class SshExecCmdFailure(OsXenApiException):
@@ -43,7 +45,8 @@ class SSHClient(object):
     def __del__(self):
         self.client.close()
 
-    def ssh(self, command, get_pty=True, output=False):
+    def ssh(self, command, get_pty=True, output=False,
+            allowed_return_codes=[0]):
         if self.log:
             self.log.debug("Executing command: [%s]" % command)
         stdin, stdout, stderr = self.client.exec_command(
@@ -56,13 +59,13 @@ class SSHClient(object):
             if err:
                 self.log.error(err)
         ret = stdout.channel.recv_exit_status()
-        if ret:
-            if self.log:
-                self.log.debug("FAILED executing command: [%s]"
-                               "-(ret=%s)" % (command, ret))
+        if ret in allowed_return_codes:
+            LOG.info('Swallowed acceptable return code of %d', ret)
+        else:
+            LOG.warn('unacceptable return code: %d', ret)
             raise SshExecCmdFailure(command=command,
                                     stdout=out, stderr=err)
-        return out, err
+        return ret, out, err
 
     def scp(self, source, dest):
         if self.log:
