@@ -43,7 +43,8 @@ class SSHClient(object):
     def __del__(self):
         self.client.close()
 
-    def ssh(self, command, get_pty=True, output=False):
+    def ssh(self, command, get_pty=True, output=False,
+            allowed_return_codes=[0, ]):
         if self.log:
             self.log.debug("Executing command: [%s]" % command)
         stdin, stdout, stderr = self.client.exec_command(
@@ -56,13 +57,13 @@ class SSHClient(object):
             if err:
                 self.log.error(err)
         ret = stdout.channel.recv_exit_status()
-        if ret:
+        if ret not in allowed_return_codes:
             if self.log:
                 self.log.debug("FAILED executing command: [%s]"
                                "-(ret=%s)" % (command, ret))
             raise SshExecCmdFailure(command=command,
                                     stdout=out, stderr=err)
-        return out, err
+        return ret, out, err
 
     def scp(self, source, dest):
         if self.log:
