@@ -48,36 +48,33 @@ class XenapiIptableTestCase(base.TestCase):
 
     def test_configure_dom0_iptables(self):
         client = mock.Mock()
-        client.ssh.side_effect = [sshclient.SshExecCmdFailure(
-                                  command="fake_cmd",
-                                  stdout="fake_out",
-                                  stderr="fake_err"),
-                                  None,
-                                  None,
-                                  sshclient.SshExecCmdFailure(
-                                  command="fake_cmd",
-                                  stdout="fake_out",
-                                  stderr="fake_err"),
-                                  None,
-                                  sshclient.SshExecCmdFailure(
-                                  command="fake_cmd",
-                                  stdout="fake_out",
-                                  stderr="fake_err"),
-                                  None,
-                                  None]
+        client.ssh.side_effect = [(1, 'fake_out', 'fake_err'),
+                                  (0, 'fake_out', 'fake_err'),
+                                  (0, 'fake_out', 'fake_err'),
+                                  (1, 'fake_out', 'fake_err'),
+                                  (0, 'fake_out', 'fake_err'),
+                                  (1, 'fake_out', 'fake_err'),
+                                  (0, 'fake_out', 'fake_err'),
+                                  (0, 'fake_out', 'fake_err')]
         xs_chain = 'XenServer-Neutron-INPUT'
-        expect_call1 = mock.call('iptables -t filter -L %s' % xs_chain)
-        expect_call2 = mock.call('iptables -t filter --new %s' % xs_chain)
+        expect_call1 = mock.call('iptables -t filter -L %s' % xs_chain,
+                                 allowed_return_codes=[0, 1])
+        expect_call2 = mock.call('iptables -t filter --new %s' % xs_chain,
+                                 allowed_return_codes=[0])
         expect_call3 = mock.call('iptables -t filter -I INPUT -j %s'
-                                 % xs_chain)
+                                 % xs_chain, allowed_return_codes=[0])
         expect_call4 = mock.call('iptables -t filter -C %s -p tcp -m '
-                                 'tcp --dport 6640 -j ACCEPT' % xs_chain)
+                                 'tcp --dport 6640 -j ACCEPT' % xs_chain,
+                                 allowed_return_codes=[0, 1])
         expect_call5 = mock.call('iptables -t filter -I %s -p tcp -m '
-                                 'tcp --dport 6640 -j ACCEPT' % xs_chain)
+                                 'tcp --dport 6640 -j ACCEPT' % xs_chain,
+                                 allowed_return_codes=[0])
         expect_call6 = mock.call('iptables -t filter -C %s -p udp -m '
-                                 'multiport --dport 4789 -j ACCEPT' % xs_chain)
+                                 'multiport --dport 4789 -j ACCEPT' % xs_chain,
+                                 allowed_return_codes=[0, 1])
         expect_call7 = mock.call('iptables -t filter -I %s -p udp -m '
-                                 'multiport --dport 4789 -j ACCEPT' % xs_chain)
+                                 'multiport --dport 4789 -j ACCEPT' % xs_chain,
+                                 allowed_return_codes=[0])
         expect_call8 = mock.call("service iptables save")
         expect_calls = [expect_call1, expect_call2, expect_call3, expect_call4,
                         expect_call5, expect_call6, expect_call7, expect_call8]
@@ -86,28 +83,30 @@ class XenapiIptableTestCase(base.TestCase):
 
     @mock.patch.object(himn, 'get_local_himn_eth')
     @mock.patch.object(common_function, 'execute')
-    def test_configure_himn_forwards(self, mock_execute, mock_get_eth):
+    @mock.patch.object(common_function, 'detailed_execute')
+    def test_configure_himn_forwards(self, mock_detail_execute,
+                                     mock_execute, mock_get_eth):
         mock_get_eth.return_value = 'fake_eth'
         fack_end_point = ['br-storage', 'br-mgmt']
-        mock_execute.side_effect = [None,
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    exception.ExecuteCommandFailed('fake_cmd'),
-                                    None,
-                                    None,
-                                    None,
-                                    None]
+        mock_execute.side_effect = [None, None]
+        mock_detail_execute.side_effect = [
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (1, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err'),
+            (0, 'fake_out', 'fake_err')]
 
         expect_call1 = mock.call(
             'sed',
@@ -116,67 +115,80 @@ class XenapiIptableTestCase(base.TestCase):
         expect_call2 = mock.call('sysctl', 'net.ipv4.ip_forward=1')
 
         expect_call3 = mock.call('iptables', '-t', 'nat', '-C', 'POSTROUTING',
-                                 '-o', fack_end_point[0], '-j', 'MASQUERADE')
+                                 '-o', fack_end_point[0], '-j', 'MASQUERADE',
+                                 allowed_return_codes=[0, 1])
         expect_call4 = mock.call('iptables', '-t', 'nat', '-I', 'POSTROUTING',
-                                 '-o', fack_end_point[0], '-j', 'MASQUERADE')
+                                 '-o', fack_end_point[0], '-j', 'MASQUERADE',
+                                 allowed_return_codes=[0, ])
 
         expect_call5 = mock.call('iptables', '-t', 'nat', '-C', 'POSTROUTING',
-                                 '-o', fack_end_point[1], '-j', 'MASQUERADE')
+                                 '-o', fack_end_point[1], '-j', 'MASQUERADE',
+                                 allowed_return_codes=[0, 1])
         expect_call6 = mock.call('iptables', '-t', 'nat', '-I', 'POSTROUTING',
-                                 '-o', fack_end_point[1], '-j', 'MASQUERADE')
+                                 '-o', fack_end_point[1], '-j', 'MASQUERADE',
+                                 allowed_return_codes=[0, ])
 
         expect_call7 = mock.call('iptables', '-t', 'filter', '-C', 'FORWARD',
                                  '-i', fack_end_point[0], '-o', 'fake_eth',
                                  '-m', 'state', '--state',
-                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT')
+                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT',
+                                 allowed_return_codes=[0, 1])
         expect_call8 = mock.call('iptables', '-t', 'filter', '-I', 'FORWARD',
                                  '-i', fack_end_point[0], '-o', 'fake_eth',
                                  '-m', 'state', '--state',
-                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT')
+                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT',
+                                 allowed_return_codes=[0, ])
 
         expect_call9 = mock.call('iptables', '-t', 'filter', '-C', 'FORWARD',
                                  '-i', fack_end_point[1], '-o', 'fake_eth',
                                  '-m', 'state', '--state',
-                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT')
+                                 'RELATED,ESTABLISHED', '-j', 'ACCEPT',
+                                 allowed_return_codes=[0, 1])
         expect_call10 = mock.call('iptables', '-t', 'filter', '-I', 'FORWARD',
                                   '-i', fack_end_point[1], '-o', 'fake_eth',
                                   '-m', 'state', '--state',
-                                  'RELATED,ESTABLISHED', '-j', 'ACCEPT')
+                                  'RELATED,ESTABLISHED', '-j', 'ACCEPT',
+                                  allowed_return_codes=[0, ])
 
         expect_call11 = mock.call('iptables', '-t', 'filter', '-C', 'FORWARD',
                                   '-i', 'fake_eth', '-o', fack_end_point[0],
-                                  '-j', 'ACCEPT')
+                                  '-j', 'ACCEPT', allowed_return_codes=[0, 1])
         expect_call12 = mock.call('iptables', '-t', 'filter', '-I', 'FORWARD',
                                   '-i', 'fake_eth', '-o', fack_end_point[0],
-                                  '-j', 'ACCEPT')
+                                  '-j', 'ACCEPT', allowed_return_codes=[0, ])
 
         expect_call13 = mock.call('iptables', '-t', 'filter', '-C', 'FORWARD',
                                   '-i', 'fake_eth', '-o', fack_end_point[1],
-                                  '-j', 'ACCEPT')
+                                  '-j', 'ACCEPT', allowed_return_codes=[0, 1])
         expect_call14 = mock.call('iptables', '-t', 'filter', '-I', 'FORWARD',
                                   '-i', 'fake_eth', '-o', fack_end_point[1],
-                                  '-j', 'ACCEPT')
+                                  '-j', 'ACCEPT', allowed_return_codes=[0, ])
 
         expect_call15 = mock.call('iptables', '-t', 'filter', '-C', 'INPUT',
-                                  '-i', 'fake_eth', '-j', 'ACCEPT')
+                                  '-i', 'fake_eth', '-j', 'ACCEPT',
+                                  allowed_return_codes=[0, 1])
         expect_call16 = mock.call('iptables', '-t', 'filter', '-I', 'INPUT',
-                                  '-i', 'fake_eth', '-j', 'ACCEPT')
+                                  '-i', 'fake_eth', '-j', 'ACCEPT',
+                                  allowed_return_codes=[0, ])
 
-        expect_call17 = mock.call('iptables', '-t', 'filter', '-S', 'FORWARD')
-        expect_call18 = mock.call('iptables', '-t', 'nat', '-S', 'POSTROUTING')
+        expect_call17 = mock.call('iptables', '-t', 'filter', '-S', 'FORWARD',
+                                  allowed_return_codes=[0, ])
+        expect_call18 = mock.call('iptables', '-t', 'nat', '-S', 'POSTROUTING',
+                                  allowed_return_codes=[0, ])
 
-        expect_calls = [expect_call1, expect_call2,
-                        expect_call3, expect_call4,
-                        expect_call7, expect_call8,
-                        expect_call11, expect_call12,
-                        expect_call5, expect_call6,
-                        expect_call9, expect_call10,
-                        expect_call13, expect_call14,
-                        expect_call15, expect_call16,
-                        expect_call17, expect_call18]
+        detail_execute_expect_calls = [expect_call3, expect_call4,
+                                       expect_call7, expect_call8,
+                                       expect_call11, expect_call12,
+                                       expect_call5, expect_call6,
+                                       expect_call9, expect_call10,
+                                       expect_call13, expect_call14,
+                                       expect_call15, expect_call16,
+                                       expect_call17, expect_call18]
+
         iptables.configure_himn_forwards(fack_end_point, 'fake_dom0_himn_ip')
         mock_get_eth.assert_called_once_with('fake_dom0_himn_ip')
-        mock_execute.assert_has_calls(expect_calls)
+        mock_execute.assert_has_calls([expect_call1, expect_call2])
+        mock_detail_execute.assert_has_calls(detail_execute_expect_calls)
 
     @mock.patch.object(himn, 'get_local_himn_eth')
     @mock.patch.object(common_function, 'execute')
@@ -187,21 +199,22 @@ class XenapiIptableTestCase(base.TestCase):
                           iptables.configure_himn_forwards,
                           'fake_end_point', 'fake_dom0_himn_ip')
 
-    @mock.patch.object(common_function, 'execute')
+    @mock.patch.object(common_function, 'detailed_execute')
     def test_execute_local_iptables_cmd(self, mock_execute):
         fake_rule_spec = 'fake_rule'
-        mock_execute.return_value = 'success'
+        mock_execute.return_value = (0, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       fake_rule_spec)
-        self.assertTrue(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd('fake_table',
+                                                      'fake_action',
+                                                      'fake_chain',
+                                                      fake_rule_spec)
+        self.assertEqual(ret, 0)
         mock_execute.assert_called_once_with('iptables', '-t', 'fake_table',
                                              'fake_action', 'fake_chain',
-                                             fake_rule_spec)
+                                             fake_rule_spec,
+                                             allowed_return_codes=[0, ])
 
-    @mock.patch.object(common_function, 'execute')
+    @mock.patch.object(common_function, 'detailed_execute')
     def test_execute_local_iptables_cmd_failed(self, mock_execute):
         fake_rule_spec = 'fake_rule'
         mock_execute.side_effect = [exception.ExecuteCommandFailed('fake_cmd')]
@@ -213,50 +226,48 @@ class XenapiIptableTestCase(base.TestCase):
 
         mock_execute.assert_called_once_with('iptables', '-t', 'fake_table',
                                              'fake_action', 'fake_chain',
-                                             fake_rule_spec)
+                                             fake_rule_spec,
+                                             allowed_return_codes=[0, ])
 
-    @mock.patch.object(common_function, 'execute')
+    @mock.patch.object(common_function, 'detailed_execute')
     def test_execute_local_iptables_cmd_expect_failed(self, mock_execute):
         fake_rule_spec = 'fake_rule'
-        mock_execute.side_effect = [exception.ExecuteCommandFailed('fake_cmd')]
+        mock_execute.return_value = (1, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       fake_rule_spec,
-                                                       None,
-                                                       True)
-        self.assertFalse(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd(
+            'fake_table', 'fake_action', 'fake_chain',
+            rule_spec=fake_rule_spec, client=None, allowed_return_codes=[0, 1])
+        self.assertEqual(ret, 1)
         mock_execute.assert_called_once_with('iptables', '-t', 'fake_table',
                                              'fake_action', 'fake_chain',
-                                             fake_rule_spec)
+                                             fake_rule_spec,
+                                             allowed_return_codes=[0, 1])
 
-    @mock.patch.object(common_function, 'execute')
+    @mock.patch.object(common_function, 'detailed_execute')
     def test_execute_local_iptables_cmd_no_rule_spec(self, mock_execute):
-        mock_execute.return_value = 'success'
+        mock_execute.return_value = (0, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       None)
-        self.assertTrue(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd('fake_table',
+                                                      'fake_action',
+                                                      'fake_chain')
+        self.assertEqual(ret, 0)
         mock_execute.assert_called_once_with('iptables', '-t', 'fake_table',
-                                             'fake_action', 'fake_chain')
+                                             'fake_action', 'fake_chain',
+                                             allowed_return_codes=[0, ])
 
     def test_execute_remote_iptables_cmd(self):
         fake_client = mock.Mock()
         fake_rule_spec = 'fake_rule'
-        fake_client.ssh.return_value = 'success'
+        fake_client.ssh.return_value = (0, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       fake_rule_spec,
-                                                       fake_client)
-        self.assertTrue(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd(
+            'fake_table', 'fake_action', 'fake_chain',
+            rule_spec=fake_rule_spec, client=fake_client)
+        self.assertEqual(ret, 0)
         fake_client.ssh.assert_called_once_with('iptables -t fake_table ' +
                                                 'fake_action fake_chain ' +
-                                                fake_rule_spec)
+                                                fake_rule_spec,
+                                                allowed_return_codes=[0, ])
 
     def test_execute_remote_iptables_cmd_failed(self):
         fake_client = mock.Mock()
@@ -274,36 +285,35 @@ class XenapiIptableTestCase(base.TestCase):
 
         fake_client.ssh.assert_called_once_with('iptables -t fake_table ' +
                                                 'fake_action fake_chain ' +
-                                                fake_rule_spec)
+                                                fake_rule_spec,
+                                                allowed_return_codes=[0, ])
 
     def test_execute_remote_iptables_cmd_expect_failed(self):
         fake_client = mock.Mock()
         fake_rule_spec = 'fake_rule'
-        fake_client.ssh.side_effect = [sshclient.SshExecCmdFailure(
-                                       command="fake_cmd",
-                                       stdout="fake_out",
-                                       stderr="fake_err")]
+        fake_client.ssh.return_value = (1, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       fake_rule_spec,
-                                                       fake_client,
-                                                       True)
-        self.assertFalse(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd('fake_table',
+                                                      'fake_action',
+                                                      'fake_chain',
+                                                      fake_rule_spec,
+                                                      fake_client,
+                                                      [0, 1])
+        self.assertEqual(ret, 1)
         fake_client.ssh.assert_called_once_with('iptables -t fake_table ' +
                                                 'fake_action fake_chain ' +
-                                                fake_rule_spec)
+                                                fake_rule_spec,
+                                                allowed_return_codes=[0, 1])
 
     def test_execute_remote_iptables_cmd_no_rule_spec(self):
         fake_client = mock.Mock()
-        fake_client.ssh.return_value = 'success'
+        fake_client.ssh.return_value = (0, 'fake_out', 'fake_err')
 
-        execute_result = iptables.execute_iptables_cmd('fake_table',
-                                                       'fake_action',
-                                                       'fake_chain',
-                                                       None,
-                                                       fake_client)
-        self.assertTrue(execute_result)
+        ret, out, err = iptables.execute_iptables_cmd('fake_table',
+                                                      'fake_action',
+                                                      'fake_chain',
+                                                      client=fake_client)
+        self.assertEqual(ret, 0)
         fake_client.ssh.assert_called_once_with("iptables -t fake_table "
-                                                "fake_action fake_chain")
+                                                "fake_action fake_chain",
+                                                allowed_return_codes=[0, ])
