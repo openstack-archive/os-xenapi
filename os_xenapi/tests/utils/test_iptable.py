@@ -274,22 +274,20 @@ class XenapiIptableTestCase(base.TestCase):
 
         fake_client.ssh.assert_called_once_with('iptables -t fake_table ' +
                                                 'fake_action fake_chain ' +
-                                                fake_rule_spec)
+                                                fake_rule_spec,
+                                                allowed_return_codes=[0])
 
     def test_execute_remote_iptables_cmd_expect_failed(self):
         fake_client = mock.Mock()
         fake_rule_spec = 'fake_rule'
-        fake_client.ssh.side_effect = [sshclient.SshExecCmdFailure(
-                                       command="fake_cmd",
-                                       stdout="fake_out",
-                                       stderr="fake_err")]
+        fake_client.ssh.return_value = (1, 'fake_out', 'fake_err')
 
         execute_result = iptables.execute_iptables_cmd('fake_table',
                                                        'fake_action',
                                                        'fake_chain',
                                                        fake_rule_spec,
                                                        fake_client,
-                                                       True)
+                                                       [0, 1])
         self.assertFalse(execute_result)
         fake_client.ssh.assert_called_once_with('iptables -t fake_table ' +
                                                 'fake_action fake_chain ' +

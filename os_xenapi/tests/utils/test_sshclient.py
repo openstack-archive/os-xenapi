@@ -52,7 +52,7 @@ class SshClientTestCase(base.TestCase):
 
         client = sshclient.SSHClient('ip', 'username', password='password',
                                      log=mock_log)
-        out, err = client.ssh('fake_command', output=True)
+        return_code, out, err = client.ssh('fake_command', output=True)
 
         mock_log.debug.assert_called()
         mock_exec.assert_called()
@@ -80,6 +80,25 @@ class SshClientTestCase(base.TestCase):
 
     @mock.patch.object(paramiko.SSHClient, 'set_missing_host_key_policy')
     @mock.patch.object(paramiko.SSHClient, 'connect')
+    @mock.patch.object(paramiko.SSHClient, 'exec_command')
+    def test_ssh_allow_error_return(self, mock_exec, mock_conn, mock_set):
+        mock_log = mock.Mock()
+        mock_channel = mock.Mock()
+        mock_exec.return_value = (fake_channel_file(['input']),
+                                  fake_channel_file(['info'], mock_channel),
+                                  fake_channel_file(['err']))
+        mock_channel.recv_exit_status.return_value = -1
+
+        client = sshclient.SSHClient('ip', 'username', password='password',
+                                     log=mock_log)
+        return_code, out, err = client.ssh('fake_command', output=True,
+                                           allowed_return_codes=[0, 1])
+        mock_exec.assert_called_once_with('fake_command', get_pty=True)
+        mock_channel.recv_exit_status.assert_called_once()
+        self.assertEqual(return_code, 1)
+
+    @mock.patch.object(paramiko.SSHClient, 'set_missing_host_key_policy')
+    @mock.patch.object(paramiko.SSHClient, 'connect')
     @mock.patch.object(paramiko.SSHClient, 'open_sftp')
     def test_scp(self, mock_open, mock_conn, mock_set):
         mock_log = mock.Mock()
@@ -87,6 +106,7 @@ class SshClientTestCase(base.TestCase):
         mock_open.return_value = mock_sftp
 
         client = sshclient.SSHClient('ip', 'username', password='password',
+
                                      log=mock_log)
         client.scp('source_file', 'dest_file')
 

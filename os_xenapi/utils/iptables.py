@@ -19,6 +19,8 @@ It contains the utilities relative to iptable settings."""
 import sys
 
 from os_xenapi.client import exception
+from os_xenapi.client.exception import OsXenApiException
+from os_xenapi.client.i18n import _
 from os_xenapi.utils import common_function
 from os_xenapi.utils import himn
 from os_xenapi.utils import sshclient
@@ -26,6 +28,12 @@ from os_xenapi.utils import sshclient
 
 OVS_NATIVE_TCP_PORT = '6640'
 VXLAN_UDP_PORT = '4789'
+
+
+class IptablesCMDFailure(OsXenApiException):
+    msg_fmt = _("Failed to execute: %(command)s\n"
+                "stdout: %(stdout)s\n"
+                "stderr: %(stderr)s")
 
 
 def exit_with_error(err_msg):
@@ -37,7 +45,7 @@ def configure_dom0_iptables(client):
     xs_chain = 'XenServer-Neutron-INPUT'
     # Check XenServer specific chain, create if not exist
     if not execute_iptables_cmd('filter', '-L', xs_chain, client=client,
-                                expect_exception=True):
+                                allowed_return_codes=[0, 1]):
         execute_iptables_cmd('filter', '--new', xs_chain, client=client)
         rule_spec = ('-j %s' % xs_chain)
         execute_iptables_cmd('filter', '-I', 'INPUT', rule_spec, client)
@@ -86,12 +94,13 @@ def configure_himn_forwards(forwarding_interfaces, dom0_himn_ip):
 
 
 def ensure_iptables(table, chain, rule_spec, client=None):
-    if not execute_iptables_cmd(table, '-C', chain, rule_spec, client, True):
+    if not execute_iptables_cmd(table, '-C', chain, rule_spec, client,
+                                allowed_return_codes=[0, 1]):
         execute_iptables_cmd(table, '-I', chain, rule_spec, client)
 
 
 def execute_iptables_cmd(table, action, chain, rule_spec=None, client=None,
-                         expect_exception=False):
+                         allowed_return_codes=[0, ]):
     """This function is used to run iptables command.
 
     Users could run command to configure iptables for remote and local hosts.
@@ -113,26 +122,23 @@ def execute_iptables_cmd(table, action, chain, rule_spec=None, client=None,
                    % {'table': table, 'action': action,
                       'chain': chain, 'rule_spec': rule_spec})
         command = command.strip()
-        try:
-            client.ssh(command)
-        except sshclient.SshExecCmdFailure:
-            if expect_exception:
-                return False
-            else:
-                raise
+        ret, out, err = client.ssh(command,
+                                   allowed_return_codes=allowed_return_codes)
+        if ret != 0:
+            return False
     else:
         if rule_spec:
             rule_spec = rule_spec.split()
         else:
             rule_spec = []
         command = ['iptables', '-t', table, action, chain] + rule_spec
-        try:
-            common_function.execute(*command)
-        except exception.ExecuteCommandFailed:
-            if expect_exception:
-                return False
-            else:
-                raise
+        ret, out, err = common_function.detailed_execute(
+            *command, allowed_return_codes=allowed_return_codes)
+        if ret not in allowed_return_codes:
+            raise IptablesCMDFailure(command=command, stdout=out, stderr=err)
+        elif ret != 0:
+            return False
+
     return True
 
 
