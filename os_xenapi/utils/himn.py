@@ -51,7 +51,7 @@ def get_local_himn_eth_via_ip(ip_in_himn, eths=None):
         ipv4s = netifaces.ifaddresses(eth).get(netifaces.AF_INET, [])
         for ipv4 in ipv4s:
             net_if = ipaddress.IPv4Interface(
-                ipv4['addr'] + '/' + ipv4['netmask'])
+                ipv4['addr'] + u'/' + ipv4['netmask'])
             if isinstance(ip_in_himn, bytes):
                 ip_in_himn = ip_in_himn.decode('utf-8')
             hint_himn_ipaddr = ipaddress.ip_address(ip_in_himn)
