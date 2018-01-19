@@ -110,3 +110,48 @@ def get_host_ipv4s(host_client):
             ipv4s.append(ipv4)
 
     return ipv4s
+
+
+def get_vm_vifs(xenserver_client,  vm_uuid):
+    PATTERN_VIFS_IN_VM = '/xapi/%s/private/vif'
+
+    vm_vifs =  PATTERN_VIFS_IN_VM % vm_uuid
+    out, _ = xenserver_client.ssh('xenstore-list %s' % vm_vifs)
+    vif_ids = [x.strip() for x in out.split('\n') if x.strip()]
+
+    vifs = []
+    for id in vif_ids:
+        vif_ent = '/'.join([vm_vifs, id])
+        out, _ = xenserver_client.ssh('xenstore-ls %s' % vif_ent)
+        key_values = [x.strip().split(' = ') for x in out.split('\n')
+                      if ' = ' in x]
+        vif_dict = {x[0]: x[1].replace('\"', '') for x in key_values}
+        vifs.append(vif_dict)
+
+    return vifs
+        
+
+def get_domu_vifs_by_eth(xenserver_client):
+    """Get domU's vifs
+
+    This function can be used to get a domU's vifs.
+    :param xenserver_client: the ssh client connected to XenServer where the domU belongs to.
+    :returns: dict -- The domU's vifs with ethernet interfaces as the keys.
+    """
+
+    # Get domU VM's uuid
+    out = execute('xenstore-read', 'vm')
+    vm_uuid = out.split('/')[-1]
+
+    vifs = get_vm_vifs(xenserver_client, vm_uuid)
+    vifs_by_mac = {vif['mac']: vif for vif in vifs}
+
+    # Get all ethernet interfaces and mapping them into vifs basing on mac address
+    vifs_by_eth = {}
+    for eth in netifaces.interfaces():
+        mac_addrs = [x['addr'] for x in netifaces.ifaddresses(eth)[netifaces.AF_LINK]]
+        for mac in vifs_by_mac:
+            if mac in mac_addrs:
+                vifs_by_eth[eth] = vifs_by_mac[mac]
+                break
+    return vifs_by_eth
