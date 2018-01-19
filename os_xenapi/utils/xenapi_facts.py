@@ -50,6 +50,9 @@ def get_xenapi_facts(dom0_client):
     facts['domu_himn_eth'] = eth
     facts['domu_himn_ip'] = ip_addr
 
+    # get domU eths' vif data
+    facts['domu_vifs'] = common_function.get_domu_vifs_by_eth(dom0_client)
+
     return facts
 
 
