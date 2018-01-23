@@ -12,6 +12,7 @@
 import mock
 import os
 
+from os_xenapi.client.i18n import _
 from os_xenapi.tests import base
 from os_xenapi.utils import conntrack_service
 
@@ -20,7 +21,7 @@ class XenapiConntrackServiceTestCase(base.TestCase):
     @mock.patch.object(os.path, 'dirname')
     def test_ensure_conntrack_packages(self, mock_dirname):
         client = mock.Mock()
-        client.ssh.return_value = '/tmp/domu_sh.fake'
+        client.ssh.return_value = ('', '/tmp/domu_sh.fake', '')
         mock_dirname.return_value = '/fake_dir'
         ssh_expect_call = [mock.call("mkdir -p /tmp/domu_sh.fake"),
                            mock.call("chmod +x /tmp/domu_sh.fake/"
@@ -39,7 +40,7 @@ class XenapiConntrackServiceTestCase(base.TestCase):
     def test_enable_conntrack_service(self, mock_ensure_conntrack,
                                       mock_dir_name):
         client = mock.Mock()
-        client.ssh.return_value = '/tmp/domu_sh.fake'
+        client.ssh.return_value = ('', '/tmp/domu_sh.fake', '')
         mock_dir_name.return_value = '/fake_dir'
         ssh_expect_call = [mock.call("mkdir -p /tmp/domu_sh.fake"),
                            mock.call("chmod +x /tmp/domu_sh.fake/"
