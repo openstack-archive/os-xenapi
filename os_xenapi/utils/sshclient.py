@@ -45,8 +45,7 @@ class SSHClient(object):
     def __del__(self):
         self.client.close()
 
-    def ssh(self, command, get_pty=True, output=False,
-            allowed_return_codes=[0]):
+    def ssh(self, command, get_pty=True, allowed_return_codes=[0]):
         if self.log:
             self.log.debug("Executing command: [%s]" % command)
         stdin, stdout, stderr = self.client.exec_command(
