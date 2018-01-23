@@ -92,7 +92,7 @@ def get_eth_mac(eth):
 
 def get_remote_hostname(host_client):
     # Get remote host's hostname via the host_client connected to the host.
-    out, _ = host_client.ssh('hostname')
+    _, out, _ = host_client.ssh('hostname')
     hostname = out.strip()
     return hostname
 
@@ -101,7 +101,7 @@ def get_host_ipv4s(host_client):
     # Get host's IPs (v4 only) via the host_client connected to the host.
     ipv4s = []
     command = "ip -4 -o addr show scope global | awk '{print $2, $4}'"
-    out, _ = host_client.ssh(command)
+    _, out, _ = host_client.ssh(command)
     for line in out.split('\n'):
         line = line.strip()
         if line:
@@ -121,7 +121,7 @@ def get_host_ipv4s(host_client):
 
 def scp_and_execute(dom0_client, script_name):
     # copy script to remote host and execute it
-    TMP_SH_DIR = dom0_client.ssh("mktemp -d /tmp/domu_sh.XXXXXX", output=True)
+    _, TMP_SH_DIR, _ = dom0_client.ssh("mktemp -d /tmp/domu_sh.XXXXXX")
     TMP_SH_PATH = TMP_SH_DIR + '/' + script_name
     Util_DIR = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe())))
