@@ -52,7 +52,7 @@ class SshClientTestCase(base.TestCase):
 
         client = sshclient.SSHClient('ip', 'username', password='password',
                                      log=mock_log)
-        return_code, out, err = client.ssh('fake_command', output=True)
+        return_code, out, err = client.ssh('fake_command')
 
         mock_log.debug.assert_called()
         mock_exec.assert_called()
@@ -75,8 +75,9 @@ class SshClientTestCase(base.TestCase):
 
         client = sshclient.SSHClient('ip', 'username', password='password',
                                      log=mock_log)
-        self.assertRaises(sshclient.SshExecCmdFailure, client.ssh,
-                          'fake_command', output=True)
+        self.assertRaises(sshclient.SshExecCmdFailure,
+                          client.ssh,
+                          'fake_command')
 
     @mock.patch.object(paramiko.SSHClient, 'set_missing_host_key_policy')
     @mock.patch.object(paramiko.SSHClient, 'connect')
@@ -91,7 +92,7 @@ class SshClientTestCase(base.TestCase):
 
         client = sshclient.SSHClient('ip', 'username', password='password',
                                      log=mock_log)
-        return_code, out, err = client.ssh('fake_command', output=True,
+        return_code, out, err = client.ssh('fake_command',
                                            allowed_return_codes=[0, 1])
         mock_exec.assert_called_once_with('fake_command', get_pty=True)
         mock_channel.recv_exit_status.assert_called_once()

@@ -18,12 +18,15 @@ from os_xenapi.tests import base
 from os_xenapi.utils import common_function
 
 
+class ScpCmdFailure(Exception):
+    msg_fmt = ("scp failure")
+
+
 class CommonUtilFuncTestCase(base.TestCase):
     def test_get_remote_hostname(self):
         mock_client = mock.Mock()
         out = ' \nFake_host_name\n '
-        err = ''
-        mock_client.ssh.return_value = (out, err)
+        mock_client.ssh.return_value = (0, out, '')
 
         hostname = common_function.get_remote_hostname(mock_client)
 
@@ -34,8 +37,7 @@ class CommonUtilFuncTestCase(base.TestCase):
         mock_client = mock.Mock()
         out = u'xenbr0 10.71.64.118/20\n'
         out += 'xenapi 169.254.0.1/16\n'
-        err = ''
-        mock_client.ssh.return_value = (out, err)
+        mock_client.ssh.return_value = (0, out, '')
 
         ipv4s = common_function.get_host_ipv4s(mock_client)
 
@@ -153,3 +155,48 @@ class CommonUtilFuncTestCase(base.TestCase):
             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         mock_mkdir.assert_called_once_with('fake_folder/')
         mock_exists.assert_called_once_with('fake_folder/')
+
+    @mock.patch.object(os.path, 'dirname')
+    def test_scp_and_execute(self, mock_dirname):
+        fake_util_dir = 'fake_util_dir'
+        fake_tmp_sh_dir = 'fake_sh_dir'
+        fake_script_name = 'fake_script_name'
+        mock_dirname.return_value = fake_util_dir
+        mock_client = mock.Mock()
+        mock_client.ssh.return_value = (0, fake_tmp_sh_dir, '')
+        fake_tmp_sh_path = fake_tmp_sh_dir + '/' + fake_script_name
+        fake_sh_shell_dir = fake_util_dir + '/sh_tools/'
+
+        expect_ssh_calls = [mock.call("mktemp -d /tmp/domu_sh.XXXXXX"),
+                            mock.call("mkdir -p " + fake_tmp_sh_dir),
+                            mock.call("chmod +x " + fake_tmp_sh_path),
+                            mock.call(fake_tmp_sh_path),
+                            mock.call("rm -rf " + fake_tmp_sh_dir)]
+
+        common_function.scp_and_execute(mock_client, fake_script_name)
+        mock_client.ssh.assert_has_calls(expect_ssh_calls)
+        mock_client.scp.assert_called_once_with(
+            fake_sh_shell_dir + fake_script_name, fake_tmp_sh_path)
+
+    @mock.patch.object(os.path, 'dirname')
+    def test_scp_and_execute_exception(self, mock_dirname):
+        fake_util_dir = 'fake_util_dir'
+        fake_tmp_sh_dir = 'fake_sh_dir'
+        fake_script_name = 'fake_script_name'
+        mock_dirname.return_value = fake_util_dir
+        mock_client = mock.Mock()
+        mock_client.ssh.return_value = (0, fake_tmp_sh_dir, '')
+        fake_tmp_sh_path = fake_tmp_sh_dir + '/' + fake_script_name
+        fake_sh_shell_dir = fake_util_dir + '/sh_tools/'
+        mock_client.scp.side_effect = [ScpCmdFailure()]
+
+        expect_ssh_calls = [mock.call("mktemp -d /tmp/domu_sh.XXXXXX"),
+                            mock.call("mkdir -p " + fake_tmp_sh_dir),
+                            mock.call("rm -rf " + fake_tmp_sh_dir)]
+
+        self.assertRaises(ScpCmdFailure,
+                          common_function.scp_and_execute,
+                          mock_client, fake_script_name)
+        mock_client.ssh.assert_has_calls(expect_ssh_calls)
+        mock_client.scp.assert_called_once_with(
+            fake_sh_shell_dir + fake_script_name, fake_tmp_sh_path)
