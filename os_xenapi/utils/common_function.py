@@ -102,6 +102,28 @@ def get_remote_hostname(host_client):
     return hostname
 
 
+def get_iface_bridge(iface, host_client):
+    # Get bridge name for interface in the host
+
+    # return 1 means that it doesn't find a bridge for this interface.
+    ret, out, _ = host_client.ssh('ovs-vsctl iface-to-br %s' % iface,
+                                  allowed_return_codes=[0, 1])
+    if ret == 0:
+        return out.strip()
+
+    # Get no bridge for this interface; check if it's the internal
+    # interface for a bridge. The return code 2 means bridge with
+    # this name doesn't exist.
+    bridge = iface
+    ret, _, _ = host_client.ssh('ovs-vsctl br-exists %s' % bridge,
+                                allowed_return_codes=[0, 2])
+    if ret == 0:
+        return bridge
+
+    # Reaching here, means this interface doesn't belong to any bridge.
+    return None
+
+
 def get_host_ipv4s(host_client):
     # Get host's IPs (v4 only) via the host_client connected to the host.
     ipv4s = []
@@ -115,6 +137,7 @@ def get_host_ipv4s(host_client):
             network = net_if.network
             ipv4 = {}
             ipv4['interface'] = interface
+            ipv4['bridge'] = get_iface_bridge(interface, host_client)
             ipv4['address'], _ = ipv4_address.split('/')
             ipv4['broadcast'] = str(network.broadcast_address)
             ipv4['network'] = str(network.network_address)
