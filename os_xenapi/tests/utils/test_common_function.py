@@ -35,17 +35,58 @@ class CommonUtilFuncTestCase(base.TestCase):
         self.assertEqual(hostname, 'Fake_host_name')
         mock_client.ssh.assert_called_with('hostname')
 
-    def test_get_host_ipv4s(self):
+    def test_get_iface_bridge(self):
+        mock_client = mock.Mock()
+        bridge = 'xapi1'
+        mock_client.ssh.return_value = (0, '\n%s\n' % bridge, '')
+
+        ret = common_function.get_iface_bridge('fake_iface',
+                                               mock_client)
+
+        self.assertEqual(ret, bridge)
+
+    def test_get_iface_bridge_internal(self):
+        mock_client = mock.Mock()
+        bridge = 'xapi1'
+        err = 'ovs-vsctl: no interface named %s' % bridge
+        mock_client.ssh.side_effect = [(1, '', err),  # iface-to-br
+                                       (0, '', ''),  # br-exists
+                                       ]
+
+        ret = common_function.get_iface_bridge(bridge,
+                                               mock_client)
+
+        self.assertEqual(ret, bridge)
+        self.assertEqual(mock_client.ssh.call_count, 2)
+
+    def test_get_iface_bridge_none(self):
+        mock_client = mock.Mock()
+        iface = 'eth9'
+        err = 'ovs-vsctl: no interface named %s' % iface
+        mock_client.ssh.side_effect = [(1, '', err),  # iface-to-br
+                                       (2, '', ''),  # br-exists
+                                       ]
+
+        ret = common_function.get_iface_bridge(iface,
+                                               mock_client)
+
+        self.assertEqual(ret, None)
+        self.assertEqual(mock_client.ssh.call_count, 2)
+
+    @mock.patch.object(common_function, 'get_iface_bridge')
+    def test_get_host_ipv4s(self, mock_br):
         mock_client = mock.Mock()
         out = u'xenbr0 10.71.64.118/20\n'
         out += 'xenapi 169.254.0.1/16\n'
         mock_client.ssh.return_value = (_, out, _)
+        mock_br.side_effect = ['xenbr0', 'xenapi']
 
         ipv4s = common_function.get_host_ipv4s(mock_client)
 
         expect = [
             {
                 "address": "10.71.64.118",
+                "bridge": "xenbr0",
                 "broadcast": "10.71.79.255",
                 "interface": "xenbr0",
                 "netmask": "255.255.240.0",
@@ -53,6 +94,7 @@ class CommonUtilFuncTestCase(base.TestCase):
             },
             {
                 "address": "169.254.0.1",
+                "bridge": "xenapi",
                 "broadcast": "169.254.255.255",
                 "interface": "xenapi",
                 "netmask": "255.255.0.0",
