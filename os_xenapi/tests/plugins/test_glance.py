@@ -118,7 +118,6 @@ class GlanceTestCase(plugin_test.PluginTestBase):
                           self.glance._download_tarball_and_verify,
                           fake_request, 'fake_staging_path'
                           )
-        mock_urlopen.assert_called_with(fake_request)
         mock_extract_tarball.assert_called_once()
         mock_md5_new.assert_called_once()
         mock_info.getheader.assert_not_called()
@@ -141,7 +140,6 @@ class GlanceTestCase(plugin_test.PluginTestBase):
                           self.glance._download_tarball_and_verify,
                           fake_request, 'fake_staging_path'
                           )
-        mock_urlopen.assert_called_with(fake_request)
         mock_extract_tarball.assert_called_once()
         mock_md5_new.assert_called_once()
         mock_md5_new.return_value.hexdigest.assert_called_once()
@@ -200,9 +198,6 @@ class GlanceTestCase(plugin_test.PluginTestBase):
     def test_download_tarball_by_url_v2(self, mock_request):
         fake_glance_endpoint = 'fake_glance_endpoint'
         fake_image_id = 'fake_extra_headers'
-        expected_url = "%(glance_endpoint)s/v2/images/%(image_id)s/file" % {
-            'glance_endpoint': fake_glance_endpoint,
-            'image_id': fake_image_id}
         mock_download_tarball_and_verify = self.mock_patch_object(
             self.glance, '_download_tarball_and_verify')
         mock_request.return_value = 'fake_request'
@@ -210,8 +205,6 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         self.glance._download_tarball_by_url_v2(
             'fake_sr_path', 'fake_staging_path', fake_image_id,
             fake_glance_endpoint, 'fake_extra_headers')
-        mock_request.assert_called_with(expected_url,
-                                        headers='fake_extra_headers')
         mock_download_tarball_and_verify.assert_called_with(
             'fake_request', 'fake_staging_path')
 

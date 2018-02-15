@@ -30,7 +30,9 @@
 #
 
 import base64
-import commands  # noqa
+from future import standard_library
+standard_library.install_aliases()
+from subprocess import getoutput
 try:
     import json
 except ImportError:
@@ -48,11 +50,11 @@ DEFAULT_TIMEOUT = 30
 PluginError = dom0_pluginlib.PluginError
 
 
-class TimeoutError(StandardError):
+class TimeoutError(Exception):
     pass
 
 
-class RebootDetectedError(StandardError):
+class RebootDetectedError(Exception):
     pass
 
 
@@ -65,7 +67,7 @@ def version(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -87,7 +89,7 @@ def key_init(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -108,7 +110,7 @@ def password(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -124,7 +126,7 @@ def resetnetwork(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -170,7 +172,7 @@ def inject_file(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -190,7 +192,7 @@ def agent_update(self, arg_dict):
     xenstore.write_record(self, arg_dict)
     try:
         resp = _wait_for_agent(self, request_id, arg_dict, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     return resp
 
@@ -198,7 +200,7 @@ def agent_update(self, arg_dict):
 def _get_agent_features(self, arg_dict):
     """Return an array of features that an agent supports."""
     timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
-    tmp_id = commands.getoutput("uuidgen")
+    tmp_id = getoutput("uuidgen")
     dct = {}
     dct.update(arg_dict)
     dct["value"] = json.dumps({"name": "features", "value": ""})
@@ -206,7 +208,7 @@ def _get_agent_features(self, arg_dict):
     xenstore.write_record(self, dct)
     try:
         resp = _wait_for_agent(self, tmp_id, dct, timeout)
-    except TimeoutError, e:  # noqa
+    except TimeoutError as e:  # noqa
         raise PluginError(e)
     response = json.loads(resp)
     if response['returncode'] != 0:
