@@ -53,7 +53,7 @@ SEEK_END = 2
 def _last_bytes(file_like_object):
     try:
         file_like_object.seek(-MAX_CONSOLE_BYTES, SEEK_END)
-    except IOError, e:  # noqa
+    except IOError as e:  # noqa
         if e.errno == 22:
             file_like_object.seek(0, SEEK_SET)
         else:
@@ -75,7 +75,7 @@ def get_console_log(session, arg_dict):
     try:
         try:
             log_content = _last_bytes(logfile)
-        except IOError, e:  # noqa
+        except IOError as e:  # noqa
             msg = "Error reading console: %s" % e
             logging.debug(msg)
             raise dom0_pluginlib.PluginError(msg)
