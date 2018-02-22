@@ -32,7 +32,7 @@ PATTERN_XENSTORE_VIFS_IN_VM = '/xapi/%s/private/vif'
 
 LOG_ROOT = '/var/log/os-xenapi'
 DEFAULT_LOG_FILE = 'xenapi.log'
-LOG = logging.getLogger('XenAPI_utils')
+LOG = logging.getLogger(__name__)
 
 
 def exit_with_error(err_msg):

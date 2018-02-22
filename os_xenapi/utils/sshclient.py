@@ -20,7 +20,7 @@ import paramiko
 from os_xenapi.client.exception import OsXenApiException
 from os_xenapi.client.i18n import _
 
-LOG = logging.getLogger('SSHClient')
+LOG = logging.getLogger(__name__)
 
 
 class SshExecCmdFailure(OsXenApiException):

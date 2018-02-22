@@ -20,7 +20,7 @@ import sys
 from os_xenapi.utils import common_function
 from os_xenapi.utils import sshclient
 
-LOG = logging.getLogger('conntrack_service')
+LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
 
