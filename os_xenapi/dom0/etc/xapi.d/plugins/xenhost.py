@@ -35,6 +35,7 @@ import re
 import sys
 import time
 
+import six
 import utils
 
 import dom0_pluginlib as pluginlib
@@ -62,7 +63,7 @@ def jsonify(fnc):
     return wrapper
 
 
-class TimeoutError(StandardError):
+class TimeoutError(Exception):
     pass
 
 
@@ -70,7 +71,7 @@ def _run_command(cmd, cmd_input=None):
     """Wrap utils.run_command to raise PluginError on failure"""
     try:
         return utils.run_command(cmd, cmd_input=cmd_input)
-    except utils.SubprocessException, e:  # noqa
+    except utils.SubprocessException as e:  # noqa
         raise pluginlib.PluginError(e.err)
 
 
@@ -204,10 +205,10 @@ def iptables_config(session, args):
     # either execute iptable-save or iptables-restore
     # command must be only one of these two
     # process_input must be used only with iptables-restore
-    if len(cmd) > 0 and cmd[0] in ('iptables-save',
-                                   'iptables-restore',
-                                   'ip6tables-save',
-                                   'ip6tables-restore'):
+    if len(list(cmd)) > 0 and cmd[0] in ('iptables-save',
+                                         'iptables-restore',
+                                         'ip6tables-save',
+                                         'ip6tables-restore'):
         result = _run_command(cmd, process_input)
         ret_str = json.dumps(dict(out=result, err=''))
         logging.debug("iptables_config:exit")
@@ -375,7 +376,7 @@ ALLOWED_NETWORK_CMDS = {
 def network_config(session, args):
     """network config functions"""
     cmd = pluginlib.exists(args, 'cmd')
-    if not isinstance(cmd, basestring):
+    if not isinstance(cmd, six.string_types):
         msg = "invalid command '%s'" % str(cmd)
         raise pluginlib.PluginError(msg)
         return
