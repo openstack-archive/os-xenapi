@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    Now we can support boostrap an OpenStack compute node by running the command of
+    ``xenapi_bootstrap`` from a VM which is running on XenServer. It will automatically
+    finish the following bootstrap tasks:
+
+    * configure HIMN interface (firstly need add a VIF for the VM to connect to HIMN.)
+
+    * configure iptalbes to allow OpenStack traffic between compute VM and Dom0.
+
+    * install OpenStack XAPI plugins into Dom0
+
+    * gather XenAPI facts and save them into a json file which can be used
+      as input for other OpenStack deployment tasks.
+
+    * and other misc bootstrap operations: e.g. enable Linux bridge in Dom0.
+
+    .. note::
+
+           At the moment, ``xenapi_bootstrap`` only supports CentOS 7.x.

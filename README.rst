@@ -30,6 +30,13 @@ The following features are supported since 0.3.1:
   e.g. it's able to live migrate instance between two hosts without
   moving the disks on shared storage.
 
+The following features are supported since 0.3.2:
+
+* Bootstrap compute node via a single command
+  Now we can support to boostrap an OpenStack compute node by running the
+  command of ``xenapi_bootstrap`` from a VM which is running on XenServer.
+  At the moment, only CentOS 7.x is supported.
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Install Devstack on XenServer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
