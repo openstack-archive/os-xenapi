@@ -17,18 +17,16 @@ import mock
 import sys
 try:
     import httplib
-    import urllib2
-    from urllib2 import HTTPError
-    from urllib2 import URLError
-    from urlparse import urlparse
 except ImportError:
     # make py3.x happy: it's needed for script parsing, although this test
     # is excluded from py3.x testing
     import http.client as httplib
-    from urllib.error import HTTPError
-    from urllib.error import URLError
-    from urllib.parse import urlparse
-    import urllib.request as urllib2
+
+from six.moves import urllib
+from six.moves.urllib.error import HTTPError
+from six.moves.urllib.error import URLError
+from six.moves.urllib.parse import urlparse
+
 import json
 from os_xenapi.tests.plugins import plugin_test
 
@@ -74,7 +72,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_HTTPConn.return_value.connect.assert_called_once()
         self.assertEqual(fake_https_return, fake_create_Conn_return)
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_and_verify_ok(self, mock_urlopen):
         mock_extract_tarball = self.mock_patch_object(
             self.glance.utils, 'extract_tarball')
@@ -85,7 +83,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_info = mock.Mock()
         mock_info.getheader.return_value = 'expect_cksum'
         mock_urlopen.return_value.info.return_value = mock_info
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.glance._download_tarball_and_verify(
             fake_request, 'fake_staging_path')
@@ -95,7 +93,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_info.getheader.assert_called_once()
         mock_md5_new.return_value.hexdigest.assert_called_once()
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_ok_extract_failed(self, mock_urlopen):
         mock_extract_tarball = self.mock_patch_object(
             self.glance.utils, 'extract_tarball')
@@ -112,7 +110,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_info = mock.Mock()
         mock_info.getheader.return_value = 'expect_cksum'
         mock_urlopen.return_value.info.return_value = mock_info
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.assertRaises(self.glance.RetryableError,
                           self.glance._download_tarball_and_verify,
@@ -123,7 +121,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_info.getheader.assert_not_called()
         mock_md5_new.hexdigest.assert_not_called()
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_ok_verify_failed(self, mock_urlopen):
         mock_extract_tarball = self.mock_patch_object(
             self.glance.utils, 'extract_tarball')
@@ -134,7 +132,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_info = mock.Mock()
         mock_info.getheader.return_value = 'expect_cksum'
         mock_urlopen.return_value.info.return_value = mock_info
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.assertRaises(self.glance.RetryableError,
                           self.glance._download_tarball_and_verify,
@@ -144,38 +142,38 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_md5_new.assert_called_once()
         mock_md5_new.return_value.hexdigest.assert_called_once()
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_failed_HTTPError(self, mock_urlopen):
         mock_urlopen.side_effect = HTTPError(
             None, None, None, None, None)
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.assertRaises(
             self.glance.RetryableError,
             self.glance._download_tarball_and_verify,
             fake_request, 'fake_staging_path')
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_failed_URLError(self, mock_urlopen):
         mock_urlopen.side_effect = URLError(None)
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.assertRaises(
             self.glance.RetryableError,
             self.glance._download_tarball_and_verify,
             fake_request, 'fake_staging_path')
 
-    @mock.patch.object(urllib2, 'urlopen')
+    @mock.patch.object(urllib.request, 'urlopen')
     def test_download_failed_HTTPException(self, mock_urlopen):
         mock_urlopen.side_effect = httplib.HTTPException()
-        fake_request = urllib2.Request('http://fakeurl.com')
+        fake_request = urllib.request.Request('http://fakeurl.com')
 
         self.assertRaises(
             self.glance.RetryableError,
             self.glance._download_tarball_and_verify,
             fake_request, 'fake_staging_path')
 
-    @mock.patch.object(urllib2, 'Request')
+    @mock.patch.object(urllib.request, 'Request')
     def test_download_tarball_by_url_v1(self, mock_request):
         fake_glance_endpoint = 'fake_glance_endpoint'
         fake_image_id = 'fake_extra_headers'
@@ -194,7 +192,7 @@ class GlanceTestCase(plugin_test.PluginTestBase):
         mock_download_tarball_and_verify.assert_called_with(
             'fake_request', 'fake_staging_path')
 
-    @mock.patch.object(urllib2, 'Request')
+    @mock.patch.object(urllib.request, 'Request')
     def test_download_tarball_by_url_v2(self, mock_request):
         fake_glance_endpoint = 'fake_glance_endpoint'
         fake_image_id = 'fake_extra_headers'
