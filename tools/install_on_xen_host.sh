@@ -37,11 +37,6 @@ optional arguments:
  -r DISABLE_JOURNALING Disable journaling if this flag is set. It will reduce disk IO, but
                        may lead to file system unstable after long time use
 
-flags:
- -f                 Force SR replacement. If your XenServer has an LVM type SR,
-                    it will be destroyed and replaced with an ext SR.
-                    WARNING: This will destroy your actual default SR !
-
 An example run:
 
   # Install devstack
@@ -105,38 +100,8 @@ fi
 echo -n "Verify XenServer has an ext type default SR..."
 defaultSR=$(xe pool-list params=default-SR minimal=true)
 currentSrType=$(xe sr-param-get uuid=$defaultSR param-name=type)
-if [ "$currentSrType" != "ext" -a "$currentSrType" != "nfs" -a "$currentSrType" != "ffs" -a "$currentSrType" != "file" ]; then
-    if [ "true" == "$FORCE_SR_REPLACEMENT" ]; then
-        echo ""
-        echo ""
-        echo "Trying to replace the default SR with an EXT SR"
 
-        pbd_uuid=`xe pbd-list sr-uuid=$defaultSR minimal=true`
-        host_uuid=`xe pbd-param-get uuid=$pbd_uuid param-name=host-uuid`
-        use_device=`xe pbd-param-get uuid=$pbd_uuid param-name=device-config param-key=device`
-
-        # Destroy the existing SR
-        xe pbd-unplug uuid=$pbd_uuid
-        xe sr-destroy uuid=$defaultSR
-
-        sr_uuid=`xe sr-create content-type=user host-uuid=$host_uuid type=ext device-config:device=$use_device shared=false name-label="Local storage"`
-        pool_uuid=`xe pool-list minimal=true`
-        xe pool-param-set default-SR=$sr_uuid uuid=$pool_uuid
-        xe pool-param-set suspend-image-SR=$sr_uuid uuid=$pool_uuid
-        xe sr-param-add uuid=$sr_uuid param-name=other-config i18n-key=local-storage
-        exit 0
-    fi
-    echo ""
-    echo ""
-    echo "ERROR: The xenserver host must have an EXT3/NFS/FFS/File SR as the default SR"
-    echo "Use the -f flag to destroy the current default SR and create a new"
-    echo "ext type default SR."
-    echo ""
-    echo "WARNING: This will destroy your actual default SR !"
-    echo ""
-
-    exit 1
-fi
+echo "The SR type is $currentSrType."
 
 # create template if needed
 $INSTALL_DIR/create_ubuntu_template.sh
