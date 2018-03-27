@@ -36,7 +36,6 @@ optional arguments:
                        it is done
  -r DISABLE_JOURNALING Disable journaling if this flag is set. It will reduce disk IO, but
                        may lead to file system unstable after long time use
-
 flags:
  -f                 Force SR replacement. If your XenServer has an LVM type SR,
                     it will be destroyed and replaced with an ext SR.
@@ -101,10 +100,12 @@ fi
 # begin install devstack process
 ##
 
-# Verify the host is suitable for devstack
-echo -n "Verify XenServer has an ext type default SR..."
+# Check the host's SR type.
 defaultSR=$(xe pool-list params=default-SR minimal=true)
 currentSrType=$(xe sr-param-get uuid=$defaultSR param-name=type)
+
+echo "The SR type is $currentSrType."
+
 if [ "$currentSrType" != "ext" -a "$currentSrType" != "nfs" -a "$currentSrType" != "ffs" -a "$currentSrType" != "file" ]; then
     if [ "true" == "$FORCE_SR_REPLACEMENT" ]; then
         echo ""
@@ -126,16 +127,6 @@ if [ "$currentSrType" != "ext" -a "$currentSrType" != "nfs" -a "$currentSrType" 
         xe sr-param-add uuid=$sr_uuid param-name=other-config i18n-key=local-storage
         exit 0
     fi
-    echo ""
-    echo ""
-    echo "ERROR: The xenserver host must have an EXT3/NFS/FFS/File SR as the default SR"
-    echo "Use the -f flag to destroy the current default SR and create a new"
-    echo "ext type default SR."
-    echo ""
-    echo "WARNING: This will destroy your actual default SR !"
-    echo ""
-
-    exit 1
 fi
 
 # create template if needed
