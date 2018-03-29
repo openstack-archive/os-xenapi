@@ -29,12 +29,14 @@ CHUNK_SIZE = 4 * 1024 * 1024
 
 
 class ImageStreamToVDIs(object):
-    def __init__(self, context, session, instance, host_url, image_stream_in):
+    def __init__(self, context, session, instance, host_url, sr_ref,
+                 image_stream_in):
         self.context = context
         self.session = session
         self.instance = instance
         self.host_url = urlparse.urlparse(host_url)
         self.image_stream = image_stream_in
+        self.sr_ref = sr_ref
         self.task_ref = None
         self.vdis = {}
 
@@ -56,9 +58,9 @@ class ImageStreamToVDIs(object):
                     vhd_file_parser = vhd_utils.VHDFileParser(vhd_file)
                     vhd_footer = vhd_file_parser.parse_vhd_footer()
                     virtual_size = vhd_footer.current_size
-                    sr_ref, vdi_ref = self._createVDI(self.session,
-                                                      self.instance,
-                                                      virtual_size)
+                    vdi_ref = self._createVDI(self.session,
+                                              self.instance,
+                                              virtual_size)
 
                     self._vhd_stream_to_vdi(vhd_file_parser, vdi_ref,
                                             file_size)
@@ -75,12 +77,11 @@ class ImageStreamToVDIs(object):
             self._clean()
 
     def _createVDI(self, session, instance, virtual_size):
-        sr_ref = utils.get_default_sr(session)
-        vdi_ref = utils.create_vdi(session, sr_ref, instance,
+        vdi_ref = utils.create_vdi(session, self.sr_ref, instance,
                                    instance['name'], 'root', virtual_size)
         vdi_uuid = session.VDI.get_uuid(vdi_ref)
         LOG.debug("Created a new VDI: uuid=%s" % vdi_uuid)
-        return sr_ref, vdi_ref
+        return vdi_ref
 
     def _vhd_stream_to_vdi(self, vhd_file_parser, vdi_ref, file_size):
 

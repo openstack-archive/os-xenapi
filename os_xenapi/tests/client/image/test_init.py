@@ -26,12 +26,13 @@ class ImageTestCase(base.TestCase):
         self.session = mock.Mock()
         self.instance = {'name': 'instance-001'}
         self.host_url = "http://fake-host.com"
+        self.sr_ref = "fake_sr_ref"
         self.stream = mock.Mock()
 
     @mock.patch.object(vdi_handler.ImageStreamToVDIs, 'start')
     def test_stream_to_vdis(self, mock_start):
         image.stream_to_vdis(self.context, self.session, self.instance,
-                             self.host_url, self.stream)
+                             self.host_url, self.sr_ref, self.stream)
 
         mock_start.assert_called_once_with()
 

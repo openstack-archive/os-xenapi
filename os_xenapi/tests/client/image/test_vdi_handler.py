@@ -33,12 +33,13 @@ class ImageStreamToVDIsTestCase(base.TestCase):
         self.session = mock.Mock()
         self.instance = {'name': 'instance-001'}
         self.host_url = "http://fake-host.com"
+        self.sr_ref = "fake-sr-ref"
         self.stream = mock.Mock()
 
     @mock.patch.object(tarfile, 'open')
     @mock.patch.object(vhd_utils, 'VHDFileParser')
     @mock.patch.object(vdi_handler.ImageStreamToVDIs, '_createVDI',
-                       return_value=('fake_sr_ref', 'fake_vdi_ref'))
+                       return_value='fake_vdi_ref')
     @mock.patch.object(vdi_handler.ImageStreamToVDIs, '_vhd_stream_to_vdi')
     def test_start(self, mock_to_vdi, mock_createVDI,
                    mock_get_parser, mock_open):
@@ -58,7 +59,7 @@ class ImageStreamToVDIsTestCase(base.TestCase):
 
         image_cmd = vdi_handler.ImageStreamToVDIs(self.context, self.session,
                                                   self.instance, self.host_url,
-                                                  self.stream)
+                                                  self.sr_ref, self.stream)
         image_cmd.start()
 
         self.session.task.create.assert_called_once_with(
@@ -72,21 +73,18 @@ class ImageStreamToVDIsTestCase(base.TestCase):
                                             29371904)
         self.session.VDI.get_uuid.assert_called_once_with('fake_vdi_ref')
 
-    @mock.patch.object(utils, 'get_default_sr',
-                       return_value='fake-sr-ref')
     @mock.patch.object(utils, 'create_vdi',
                        return_value='fake-vdi-ref')
-    def test_createVDI(self, mock_create_vdi, mock_get_sr):
+    def test_createVDI(self, mock_create_vdi):
         virtual_size = 1073741824
         image_cmd = vdi_handler.ImageStreamToVDIs(self.context, self.session,
                                                   self.instance, self.host_url,
-                                                  self.stream)
-        expect_result = ('fake-sr-ref', 'fake-vdi-ref')
+                                                  self.sr_ref, self.stream)
+        expect_result = 'fake-vdi-ref'
 
         result = image_cmd._createVDI(self.session, self.instance,
                                       virtual_size)
 
-        mock_get_sr.assert_called_once_with(self.session)
         mock_create_vdi.assert_called_once_with(self.session, 'fake-sr-ref',
                                                 self.instance, 'instance-001',
                                                 'root', virtual_size)
@@ -110,7 +108,7 @@ class ImageStreamToVDIsTestCase(base.TestCase):
                    'Content-Length': '%s' % file_size}
         image_cmd = vdi_handler.ImageStreamToVDIs(self.context, self.session,
                                                   self.instance, self.host_url,
-                                                  self.stream)
+                                                  self.sr_ref, self.stream)
         mock_parser = mock.Mock()
         mock_parser.cached_buff = b'\x00' * cache_size
         mock_parser.src_file = vdh_stream
@@ -150,7 +148,7 @@ class ImageStreamToVDIsTestCase(base.TestCase):
         file_size = cache_size + vdi_handler.CHUNK_SIZE * 2 + remain_size
         image_cmd = vdi_handler.ImageStreamToVDIs(self.context, self.session,
                                                   self.instance, self.host_url,
-                                                  self.stream)
+                                                  self.sr_ref, self.stream)
         mock_parser = mock.Mock()
         mock_parser.cached_buff = b'\x00' * cache_size
         mock_parser.src_file = vdh_stream
@@ -178,7 +176,7 @@ class ImageStreamToVDIsTestCase(base.TestCase):
         file_size = cache_size + vdi_handler.CHUNK_SIZE * 2 + remain_size
         image_cmd = vdi_handler.ImageStreamToVDIs(self.context, self.session,
                                                   self.instance, self.host_url,
-                                                  self.stream)
+                                                  self.sr_ref, self.stream)
         mock_parser = mock.Mock()
         mock_parser.cached_buff = b'\x00' * cache_size
         mock_parser.src_file = vdh_stream

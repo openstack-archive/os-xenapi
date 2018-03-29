@@ -15,9 +15,9 @@
 from os_xenapi.client.image import vdi_handler
 
 
-def stream_to_vdis(context, session, instance, host_url, data):
+def stream_to_vdis(context, session, instance, host_url, sr_ref, data):
     handler = vdi_handler.ImageStreamToVDIs(context, session, instance,
-                                            host_url, data)
+                                            host_url, sr_ref, data)
     handler.start()
     return handler.vdis
 
