@@ -6,7 +6,7 @@ Getting Started With XenServer and Devstack
 ___________________________________________
 
 The purpose of the code in the install directory is to help developers bootstrap a
-XenServer(7.0 and above) + OpenStack development environment.
+XenServer(7.1 or above LTSR) + OpenStack development environment.
 This guide gives some pointers on how to get started.
 
 Xenserver is a Type 1 hypervisor, so it is best installed on bare metal.  The
