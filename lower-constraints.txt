@@ -32,7 +32,7 @@ netaddr==0.7.18
 netifaces==0.10.4
 os-client-config==1.28.0
 os-testr==1.0.0
-oslo.concurrency==3.25.0
+oslo.concurrency==3.26.0
 oslo.config==5.2.0
 oslo.context==2.19.2
 oslo.i18n==3.15.3
@@ -61,7 +61,7 @@ requestsexceptions==1.2.0
 rfc3986==0.3.1
 six==1.10.0
 snowballstemmer==1.2.1
-Sphinx==1.6.5
+Sphinx==1.6.2
 sphinxcontrib-websupport==1.0.1
 stestr==1.0.0
 stevedore==1.20.0
