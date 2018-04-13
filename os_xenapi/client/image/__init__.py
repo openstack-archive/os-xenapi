@@ -22,7 +22,9 @@ def stream_to_vdis(context, session, instance, host_url, sr_ref, data):
     return handler.vdis
 
 
-def stream_from_vdis(context, session, instance, host_url, vdi_uuids):
+def stream_from_vdis(context, session, instance, host_url, vdi_uuids,
+                     compresslevel=vdi_handler.DEFAULT_COMPRESSLEVEL):
     handler = vdi_handler.GenerateImageStream(context, session, instance,
-                                              host_url, vdi_uuids)
+                                              host_url, vdi_uuids,
+                                              compresslevel)
     return handler.get_image_data()
