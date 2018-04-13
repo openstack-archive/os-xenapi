@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 CHUNK_SIZE = 4 * 1024 * 1024
+DEFAULT_COMPRESSLEVEL = 6
 
 
 class ImageStreamToVDIs(object):
@@ -129,19 +130,21 @@ class ImageStreamToVDIs(object):
 
 
 class GenerateImageStream(object):
-    def __init__(self, context, session, instance, host_url, vdi_uuids):
+    def __init__(self, context, session, instance, host_url, vdi_uuids,
+                 compresslevel=DEFAULT_COMPRESSLEVEL):
         self.context = context
         self.session = session
         self.instance = instance
         self.host_url = host_url
         self.vdi_uuids = vdi_uuids
+        self.compresslevel = compresslevel
 
     def get_image_data(self):
         """This function will:
 
           1). export VDI as VHD stream;
           2). make gzipped tarball from the VHD stream;
-          3). read from the tarball stream.and return the iterable data.
+          3). read from the tarball stream and return the iterable data.
         """
 
         tarpipe_out, tarpipe_in = utils.create_pipe()
@@ -164,7 +167,7 @@ class GenerateImageStream(object):
     def start_image_stream_generator(self, tarpipe_in):
         tar_generator = VdisToTarStream(
             self.context, self.session, self.instance, self.host_url,
-            self.vdi_uuids, tarpipe_in)
+            self.vdi_uuids, tarpipe_in, self.compresslevel)
         try:
             tar_generator.start()
         finally:
@@ -173,19 +176,23 @@ class GenerateImageStream(object):
 
 class VdisToTarStream(object):
     def __init__(self, context, session, instance, host_url, vdi_uuids,
-                 tarpipe_in):
+                 tarpipe_in, compresslevel):
         self.context = context
         self.session = session
         self.instance = instance
         self.host_url = host_url
         self.vdi_uuids = vdi_uuids
         self.tarpipe_in = tarpipe_in
+        self.compresslevel = compresslevel
         self.conn = None
         self.task_ref = None
 
     def start(self):
         # Start thread to generate tgz and write tgz data into tarpipe_in.
-        with tarfile.open(fileobj=self.tarpipe_in, mode='w|gz') as tar_file:
+        with tarfile.TarFile.gzopen(
+            name=None, fileobj=self.tarpipe_in, mode='w',
+            compresslevel=self.compresslevel) as tar_file:
+
             # only need export the leaf vdi.
             vdi_uuid = self.vdi_uuids[0]
             vdi_ref = self.session.VDI.get_by_uuid(vdi_uuid)
