@@ -30,9 +30,10 @@
 #
 
 import base64
-from future import standard_library
-standard_library.install_aliases()
-from subprocess import getoutput
+try:
+    from subprocess import getoutput
+except ImportError:
+    from commands import getoutput  # noqa
 try:
     import json
 except ImportError:
