@@ -37,8 +37,9 @@ class ImageTestCase(base.TestCase):
         mock_start.assert_called_once_with()
 
     @mock.patch.object(vdi_handler.GenerateImageStream, 'get_image_data')
-    def test_vdis_to_stream(self, mock_get):
+    def test_stream_from_vdis(self, mock_get):
         image.stream_from_vdis(self.context, self.session, self.instance,
-                               self.host_url, ['fake-uuid'])
+                               self.host_url, ['fake-uuid'],
+                               compresslevel=9)
 
         mock_get.assert_called_once_with()

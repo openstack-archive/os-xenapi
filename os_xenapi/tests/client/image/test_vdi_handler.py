@@ -220,6 +220,69 @@ class GenerateImageStreamTestCase(base.TestCase):
         mock_spawn.assert_called_once_with(mock_start, mock_tarpipe_in)
         self.assertEqual(image_chunks, ['chunk1', 'chunk2'])
 
+    @mock.patch.object(vdi_handler, 'VdisToTarStream')
+    def test_start_stream_generator(self, mock_stream):
+        # Verify the specified compress level should be used,
+        # if a compresslevel specified in GenerateImageStream.
+        compr_level = 9
+        mock_stream_obj = mock.Mock()
+        mock_stream.return_value = mock_stream_obj
+        generator = vdi_handler.GenerateImageStream(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'], compresslevel=compr_level)
+        fake_tarpipe_in = mock.Mock()
+
+        generator.start_image_stream_generator(fake_tarpipe_in)
+
+        mock_stream.assert_called_once_with(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'],
+            fake_tarpipe_in, compr_level)
+        mock_stream_obj.start.assert_called_once_with()
+        fake_tarpipe_in.close.assert_called_once_with()
+
+    @mock.patch.object(vdi_handler, 'VdisToTarStream')
+    def test_start_stream_generator_abnormal_level(self, mock_stream):
+        # Verify the vdi_handler.DEFAULT_COMPRESSLEVEL should be used,
+        # if the compresslevel specified in GenerateImageStream
+        # is abnormal value (not in 1 - 9).
+        compr_level = 10
+        mock_stream_obj = mock.Mock()
+        mock_stream.return_value = mock_stream_obj
+        generator = vdi_handler.GenerateImageStream(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'], compresslevel=compr_level)
+        fake_tarpipe_in = mock.Mock()
+
+        generator.start_image_stream_generator(fake_tarpipe_in)
+
+        mock_stream.assert_called_once_with(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'],
+            fake_tarpipe_in, vdi_handler.DEFAULT_COMPRESSLEVEL)
+        mock_stream_obj.start.assert_called_once_with()
+        fake_tarpipe_in.close.assert_called_once_with()
+
+    @mock.patch.object(vdi_handler, 'VdisToTarStream')
+    def test_start_stream_generator_none_level(self, mock_stream):
+        # Verify the vdi_handler.DEFAULT_COMPRESSLEVEL should be used,
+        # if no compresslevel specified in GenerateImageStream.
+        mock_stream_obj = mock.Mock()
+        mock_stream.return_value = mock_stream_obj
+        generator = vdi_handler.GenerateImageStream(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'])
+        fake_tarpipe_in = mock.Mock()
+
+        generator.start_image_stream_generator(fake_tarpipe_in)
+
+        mock_stream.assert_called_once_with(
+            self.context, self.session, self.instance,
+            self.host_url, ['vdi_uuid'],
+            fake_tarpipe_in, vdi_handler.DEFAULT_COMPRESSLEVEL)
+        mock_stream_obj.start.assert_called_once_with()
+        fake_tarpipe_in.close.assert_called_once_with()
+
 
 class VdisToTarStreamTestCase(base.TestCase):
     def setUp(self):
@@ -230,7 +293,7 @@ class VdisToTarStreamTestCase(base.TestCase):
         self.host_url = "http://fake-host.com"
         self.stream = mock.Mock()
 
-    @mock.patch.object(tarfile, 'open')
+    @mock.patch.object(tarfile.TarFile, 'gzopen')
     @mock.patch.object(tarfile, 'TarInfo')
     @mock.patch.object(vdi_handler.VdisToTarStream, '_connect_request',
                        return_value='fake-conn-resp')
@@ -254,14 +317,15 @@ class VdisToTarStreamTestCase(base.TestCase):
         vdi_uuids = ['vdi-uuid']
         vhdpipe_in = mock.Mock()
         mock_pipe.return_value = ('vhdpipe_out', vhdpipe_in)
+        compr_level = 5
         image_cmd = vdi_handler.VdisToTarStream(
             self.context, self.session, self.instance,
-            self.host_url, vdi_uuids, self.stream)
+            self.host_url, vdi_uuids, self.stream, compr_level)
 
         image_cmd.start()
 
-        mock_open.assert_called_once_with(fileobj=self.stream,
-                                          mode='w|gz')
+        mock_open.assert_called_once_with(name=None, fileobj=self.stream,
+                                          mode='w', compresslevel=compr_level)
         self.session.VDI.get_by_uuid.assert_called_once_with('vdi-uuid')
         mock_conn_req.assert_called_once_with('fake-vdi-ref')
         mock_dynDisk.get_vhd_file_size.assert_called_once_with()
