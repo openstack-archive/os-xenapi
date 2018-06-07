@@ -155,6 +155,10 @@ function config_ovs_agent {
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs ovsdb_connection tcp:$dom0_ip:$DOM0_OVSDB_PORT
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs of_listen_address $HOST_IP
 
+    # TODO (huanx)
+    iniset $NEUTRON_CORE_PLUGIN_CONF.domU securitygroup firewall_driver iptables_hybrid
+    iniset $NEUTRON_CORE_PLUGIN_CONF securitygroup firewall_driver iptables_hybrid
+
     if [[ "$ENABLE_TENANT_VLANS" == "True" ]]; then
         # Create a bridge "br-$VLAN_INTERFACE" and add port
         _neutron_ovs_base_add_bridge "br-$VLAN_INTERFACE"
