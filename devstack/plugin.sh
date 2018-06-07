@@ -155,6 +155,13 @@ function config_ovs_agent {
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs ovsdb_connection tcp:$dom0_ip:$DOM0_OVSDB_PORT
     iniset $NEUTRON_CORE_PLUGIN_CONF.domU ovs of_listen_address $HOST_IP
 
+    # Neutron has changed to openvswitch as default firewall driver, see patch:
+    # https://review.openstack.org/#/c/568297/1
+    # But we cannot change to openvswitch as XenServer LTSR release is using ovs 2.3.2,
+    # not ovs 2.5, so set the firewall driver back to iptables_hybrid
+    iniset $NEUTRON_CORE_PLUGIN_CONF.domU securitygroup firewall_driver iptables_hybrid
+    iniset $NEUTRON_CORE_PLUGIN_CONF securitygroup firewall_driver iptables_hybrid
+
     if [[ "$ENABLE_TENANT_VLANS" == "True" ]]; then
         # Create a bridge "br-$VLAN_INTERFACE" and add port
         _neutron_ovs_base_add_bridge "br-$VLAN_INTERFACE"
