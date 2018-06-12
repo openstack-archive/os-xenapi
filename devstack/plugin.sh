@@ -44,6 +44,7 @@ function install_dom0_plugins {
     dom0_func=`cat $OS_XENAPI_DIR/devstack/dom0_functions`
     local dom0_plugin_dir
     dom0_plugin_dir=`$ssh_dom0 "$dom0_func; set -eux; dom0_plugin_location"`
+    dom0_excutable_dir=`$ssh_dom0 "$dom0_func; set -eux; dom0_excutable_location"`
 
     # We've moved the plugins from neutron/nova to os-xenapi, but in some stable branches the
     # plugins are still located in neutron (ocata and backforward branches) or nova (Newton
@@ -62,6 +63,7 @@ function install_dom0_plugins {
     if [ -d $plugin_dir ]; then
         need_install_xenapi=True
         tar -czf - -C $plugin_dir ./ | $ssh_dom0 "tar -xzf - -C $dom0_plugin_dir"
+        $ssh_dom0 "mv $dom0_plugin_dir/rotate_xen_guest_logs.sh $dom0_excutable_dir"
     fi
 
     if [ "$need_install_xenapi" = "True" ]; then
