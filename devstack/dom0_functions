@@ -10,6 +10,14 @@ function dom0_plugin_location {
     return 1
 }
 
+function dom0_excutable_location {
+    xensource_bin='/opt/xensource/bin'
+    if [ ! -d $xensource_bin ]; then
+        sudo mkdir -p $xensource_bin
+    fi
+    echo $xensource_bin
+}
+
 function get_default_sr {
     xe pool-list params=default-SR minimal=true
 }
