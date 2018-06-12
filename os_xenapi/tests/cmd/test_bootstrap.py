@@ -71,6 +71,7 @@ class GetXenapiFactsTestCase(base.TestCase):
 
     @mock.patch.object(bootstrap, '_parse_args')
     @mock.patch.object(bootstrap, 'SSHClient')
+    @mock.patch.object(bootstrap, 'setup_guest_console_log')
     @mock.patch.object(bootstrap, 'config_himn')
     @mock.patch.object(bootstrap, 'config_iptables')
     @mock.patch.object(bootstrap, 'install_plugins_to_dom0')
@@ -78,8 +79,8 @@ class GetXenapiFactsTestCase(base.TestCase):
     @mock.patch.object(bootstrap, 'enable_linux_bridge')
     @mock.patch.object(bootstrap, 'setup_logging')
     def test_bootstrap(self, mock_setup_logging, mock_enable_lbr, mock_facts,
-                       mock_plugin, mock_iptables, mock_himn, mock_client,
-                       mock_parse):
+                       mock_plugin, mock_iptables, mock_himn, mock_guest_log,
+                       mock_client, mock_parse):
         fake_opts = {'himn-ip': '169.254.0.1',
                      'passwd': 'passwd',
                      'user-name': 'root'}
@@ -96,3 +97,4 @@ class GetXenapiFactsTestCase(base.TestCase):
                                       bootstrap.DEF_XENAPI_FACTS_FILE)
         mock_enable_lbr.assert_called_with(mock.sentinel.sshclient)
         mock_setup_logging.assert_called_once_with(log_level=logging.DEBUG)
+        mock_guest_log.assert_called_once_with(mock.sentinel.sshclient)
