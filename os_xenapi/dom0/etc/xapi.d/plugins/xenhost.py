@@ -132,7 +132,7 @@ def set_host_enabled(self, arg_dict):
 
 
 def _write_config_dict(dct):
-    conf_file = file(config_file_path, "w")
+    conf_file = open(config_file_path, 'w')
     json.dump(dct, conf_file)
     conf_file.close()
 
@@ -144,7 +144,7 @@ def _get_config_dict():
     is returned.
     """
     try:
-        conf_file = file(config_file_path)
+        conf_file = open(config_file_path, 'r')
         config_dct = json.load(conf_file)
         conf_file.close()
     except IOError:
