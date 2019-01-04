@@ -127,8 +127,8 @@ class VMOperationTestCase(plugin_test.PluginTestBase):
         fake_compute_ref = -1
         side_effect_xenapi_failure = FakeXenAPIException
         side_effect_plugin_error = (
-            [self.pluginlib.PluginError]
-            * self.host.DEFAULT_TRIES)
+            [self.pluginlib.PluginError] *
+            self.host.DEFAULT_TRIES)
         self.mock_patch_object(self.session.xenapi.VM,
                                'start')
         self.session.xenapi.VM.start.side_effect = \
@@ -967,8 +967,8 @@ class XenHostTestCase(plugin_test.PluginTestBase):
 
         self.host.get_pci_type('fake_session', fake_pci_device)
         self.host._run_command.assert_called_with(
-            ["ls", "/sys/bus/pci/devices/" + '0000:'
-             + fake_pci_device + "/"])
+            ["ls", "/sys/bus/pci/devices/" + '0000:' +
+             fake_pci_device + "/"])
 
     def test_get_pci_type_physfn(self):
         fake_pci_device = '0000:00:00.0'
