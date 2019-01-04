@@ -22,15 +22,15 @@
 #
 
 import gettext
+import subprocess
+
+import XenAPIPlugin
+
 gettext.install('neutron', unicode=1)
 try:
     import json
 except ImportError:
     import simplejson as json
-import subprocess
-
-import XenAPIPlugin
-
 
 ALLOWED_CMDS = [
     'ip',

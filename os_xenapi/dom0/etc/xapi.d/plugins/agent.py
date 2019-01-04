@@ -30,6 +30,13 @@
 #
 
 import base64
+import time
+
+import XenAPIPlugin
+
+import dom0_pluginlib
+import xenstore
+
 try:
     from subprocess import getoutput
 except ImportError:
@@ -38,13 +45,7 @@ try:
     import json
 except ImportError:
     import simplejson as json
-import time
-
-import XenAPIPlugin
-
-import dom0_pluginlib
 dom0_pluginlib.configure_logging("agent")
-import xenstore
 
 
 DEFAULT_TIMEOUT = 30
