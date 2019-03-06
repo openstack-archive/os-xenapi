@@ -44,7 +44,7 @@ import XenAPIPlugin
 
 import dom0_pluginlib
 dom0_pluginlib.configure_logging("agent")
-import xenstore
+import xenstore  # noqa
 
 
 DEFAULT_TIMEOUT = 30

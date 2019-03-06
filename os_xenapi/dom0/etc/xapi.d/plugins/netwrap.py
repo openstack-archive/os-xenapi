@@ -27,9 +27,9 @@ try:
     import json
 except ImportError:
     import simplejson as json
-import subprocess
+import subprocess  # noqa
 
-import XenAPIPlugin
+import XenAPIPlugin  # noqa
 
 
 ALLOWED_CMDS = [

@@ -188,8 +188,8 @@ class PluginlibDom0(plugin_test.PluginTestBase):
 
     @mock.patch.object(time, 'sleep')
     def test_vbd_unplug_with_retry_exceed_max_attempts(self, mock_sleep):
-        side_effects = ([FakeUnplugException(['DEVICE_DETACH_REJECTED'])]
-                        * (self.dom0_pluginlib.MAX_VBD_UNPLUG_RETRIES + 1))
+        side_effects = ([FakeUnplugException(['DEVICE_DETACH_REJECTED'])] *
+                        (self.dom0_pluginlib.MAX_VBD_UNPLUG_RETRIES + 1))
         self.session.xenapi.VBD.unplug.side_effect = side_effects
         self.dom0_pluginlib.XenAPI.Failure = FakeUnplugException
 
